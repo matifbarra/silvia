@@ -112,11 +112,32 @@ async function initDb() {
       "title"     TEXT NOT NULL,
       "dueDate"   TEXT,
       "done"      INTEGER NOT NULL DEFAULT 0,
+      "priority"  TEXT NOT NULL DEFAULT 'media',
       "createdAt" TEXT NOT NULL DEFAULT (${nowDefault})
     )
   `);
 
+  // ── Migración ──
+  // El CREATE de arriba solo corre en instalaciones NUEVAS. Para las
+  // tablas que ya existían (con datos), agregamos la columna aparte.
+  await ensureColumn('tasks', 'priority', "TEXT NOT NULL DEFAULT 'media'");
+
   console.log(`🗄️  Base de datos lista (${db.dialect})`);
+}
+
+// Agrega una columna solo si todavía no existe (idempotente en ambas bases).
+// Postgres tiene "IF NOT EXISTS"; SQLite no, así que ahí intentamos el ALTER
+// y si falla porque la columna ya está, ignoramos ese error puntual.
+async function ensureColumn(table, column, definition) {
+  if (usePostgres) {
+    await db.run(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS "${column}" ${definition}`);
+  } else {
+    try {
+      await db.run(`ALTER TABLE ${table} ADD COLUMN "${column}" ${definition}`);
+    } catch (err) {
+      if (!/duplicate column/i.test(err.message)) throw err; // otro error → sí lo propagamos
+    }
+  }
 }
 
 module.exports = { db, initDb };

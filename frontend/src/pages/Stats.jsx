@@ -15,8 +15,8 @@ import Spinner from '../components/Spinner';
 // Tarjeta de número reutilizable
 function StatCard({ label, value, accent }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5">
-      <p className={`text-3xl font-bold ${accent || 'text-slate-800'}`}>{value}</p>
+    <div className="bg-white rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 p-5">
+      <p className={`text-3xl font-bold ${accent || 'text-slate-800 dark:text-slate-100'}`}>{value}</p>
       <p className="text-sm text-slate-500 mt-1">{label}</p>
     </div>
   );
@@ -46,8 +46,8 @@ export default function Stats() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-800 mb-1">Resumen</h2>
-      <p className="text-slate-500 mb-6">Tu progreso de estudio de un vistazo.</p>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">Resumen</h2>
+      <p className="text-slate-500 dark:text-slate-400 mb-6">Tu progreso de estudio de un vistazo.</p>
 
       {/* Tarjetas de números */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -58,14 +58,14 @@ export default function Stats() {
       </div>
 
       {/* Barra de progreso general */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
+      <div className="bg-white rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 p-6 mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-slate-800">Progreso general</h3>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100">Progreso general</h3>
           <span className="text-sm font-medium text-slate-500">
             {stats.doneTasks}/{stats.totalTasks} tareas · {stats.progress}%
           </span>
         </div>
-        <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden">
+        <div className="w-full h-4 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
           <div
             className="h-full bg-indigo-600 rounded-full transition-all duration-500"
             style={{ width: `${stats.progress}%` }}
@@ -74,8 +74,8 @@ export default function Stats() {
       </div>
 
       {/* Gráfico: tareas por materia */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h3 className="font-semibold text-slate-800 mb-4">Tareas por materia</h3>
+      <div className="bg-white rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 p-6">
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">Tareas por materia</h3>
 
         {stats.perSubject.length === 0 ? (
           <p className="text-slate-400 text-sm">
@@ -93,10 +93,10 @@ export default function Stats() {
               return (
                 <div key={s.subjectId} className="flex items-center gap-3">
                   {/* Nombre de la materia */}
-                  <span className="w-40 shrink-0 text-sm text-slate-700 truncate">{s.name}</span>
+                  <span className="w-40 shrink-0 text-sm text-slate-700 dark:text-slate-300 truncate">{s.name}</span>
 
                   {/* Barra */}
-                  <div className="flex-1 h-6 bg-slate-100 rounded-lg overflow-hidden">
+                  <div className="flex-1 h-6 bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden">
                     <div
                       className={`h-full ${c.dot} rounded-lg transition-all duration-500`}
                       style={{ width: `${widthPct}%` }}

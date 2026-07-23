@@ -17,6 +17,11 @@ export async function createSubject(name, color) {
   return res.data;
 }
 
+export async function updateSubject(id, name, color) {
+  const res = await api.put(`/subjects/${id}`, { name, color });
+  return res.data;
+}
+
 export async function deleteSubject(id) {
   const res = await api.delete(`/subjects/${id}`);
   return res.data;

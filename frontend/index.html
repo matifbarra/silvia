@@ -6,6 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="silvIA — organizá y gestioná tu estudio: materias, tareas y progreso." />
     <title>silvIA · Organizá tu estudio</title>
+    <!-- Aplica el tema ANTES de pintar, para que no haya un parpadeo blanco.
+         Regla: si el usuario ya eligió, respetamos su elección (localStorage);
+         si nunca eligió, seguimos la preferencia del sistema operativo. -->
+    <script>
+      (function () {
+        var guardado = localStorage.getItem('theme');
+        var prefiereOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (guardado === 'dark' || (!guardado && prefiereOscuro)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

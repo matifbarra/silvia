@@ -10,6 +10,7 @@
 
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -18,16 +19,16 @@ export default function Layout() {
   const linkClass = ({ isActive }) =>
     `px-3 py-1.5 rounded-lg text-sm font-medium transition ${
       isActive
-        ? 'bg-indigo-100 text-indigo-700'
-        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300'
+        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-700'
     }`;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200">
+    <div className="min-h-screen">
+      <header className="bg-white border-b border-slate-200 dark:bg-slate-800 dark:border-slate-700">
         <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
           <div className="flex items-center gap-3 sm:gap-6">
-            <h1 className="text-xl font-bold text-indigo-600">silvIA</h1>
+            <h1 className="text-xl font-bold text-indigo-600 dark:text-indigo-400">silvIA</h1>
             <nav className="flex items-center gap-1">
               <NavLink to="/" end className={linkClass}>
                 Resumen
@@ -40,11 +41,14 @@ export default function Layout() {
               </NavLink>
             </nav>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="hidden sm:inline text-sm text-slate-600">Hola, {user.name} 👋</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="hidden sm:inline text-sm text-slate-600 dark:text-slate-300">
+              Hola, {user.name} 👋
+            </span>
+            <ThemeToggle />
             <button
               onClick={logout}
-              className="text-sm text-slate-500 hover:text-red-600 transition whitespace-nowrap"
+              className="text-sm text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition whitespace-nowrap"
             >
               Cerrar sesión
             </button>

@@ -14,10 +14,10 @@ const SELECT_WITH_SUBJECT = `
 `;
 
 const Task = {
-  async create({ userId, subjectId, title, dueDate }) {
+  async create({ userId, subjectId, title, dueDate, priority }) {
     const inserted = await db.get(
-      'INSERT INTO tasks ("userId", "subjectId", "title", "dueDate") VALUES (?, ?, ?, ?) RETURNING id',
-      [userId, subjectId || null, title, dueDate || null]
+      'INSERT INTO tasks ("userId", "subjectId", "title", "dueDate", "priority") VALUES (?, ?, ?, ?, ?) RETURNING id',
+      [userId, subjectId || null, title, dueDate || null, priority || 'media']
     );
     // Volvemos a leerla con el JOIN para incluir datos de la materia
     return this.findById(inserted.id, userId);
@@ -37,6 +37,15 @@ const Task = {
       `${SELECT_WITH_SUBJECT} WHERE t.id = ? AND t."userId" = ?`,
       [id, userId]
     );
+  },
+
+  async update({ id, userId, title, dueDate, subjectId, priority }) {
+    await db.run(
+      'UPDATE tasks SET "title" = ?, "dueDate" = ?, "subjectId" = ?, "priority" = ? WHERE id = ? AND "userId" = ?',
+      [title, dueDate, subjectId, priority, id, userId]
+    );
+    // La releemos con el JOIN para devolver también los datos de la materia
+    return this.findById(id, userId);
   },
 
   async toggleDone(id, userId) {

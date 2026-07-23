@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+/* ─── Modo oscuro por CLASE (no solo por preferencia del sistema) ───
+   Por defecto, Tailwind v4 activa `dark:` según prefers-color-scheme.
+   Con esta variante, `dark:` se activa cuando hay una clase `.dark` en
+   un ancestro (en nuestro caso, en <html>). Así podemos togglearlo a mano
+   y, además, guardarlo en localStorage. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Colores base de la "tela de fondo" y el texto por defecto.
+   Al cambiar la clase .dark en <html>, todo esto se invierte solo. */
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100;
+  }
+  /* Transición suave al cambiar de tema (queda prolijo) */
+  body,
+  body * {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+}

@@ -9,8 +9,13 @@ export async function getTasks() {
   return res.data;
 }
 
-export async function createTask({ title, dueDate, subjectId }) {
-  const res = await api.post('/tasks', { title, dueDate, subjectId });
+export async function createTask({ title, dueDate, subjectId, priority }) {
+  const res = await api.post('/tasks', { title, dueDate, subjectId, priority });
+  return res.data;
+}
+
+export async function updateTask(id, { title, dueDate, subjectId, priority }) {
+  const res = await api.put(`/tasks/${id}`, { title, dueDate, subjectId, priority });
   return res.data;
 }
 
