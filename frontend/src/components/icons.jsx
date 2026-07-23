@@ -125,6 +125,33 @@ export function IconX({ className = 'w-4 h-4' }) {
   );
 }
 
+export function IconLock({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="4" y="10" width="16" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
+export function IconChevron({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+export function IconRoute({ className = 'w-5 h-5' }) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="6" cy="19" r="3" />
+      <circle cx="18" cy="5" r="3" />
+      <path d="M9 19h5a4 4 0 0 0 0-8h-4a4 4 0 0 1 0-8h5" />
+    </svg>
+  );
+}
+
 export function IconClipboard({ className = 'w-5 h-5' }) {
   return (
     <svg {...base} className={className}>

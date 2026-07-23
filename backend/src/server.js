@@ -8,6 +8,7 @@ const authRoutes = require('./routes/authRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const carreraRoutes = require('./routes/carreraRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -38,6 +39,9 @@ app.use('/api/tasks', taskRoutes);
 
 // Rutas de estadísticas → cuelgan de /api/stats (protegida)
 app.use('/api/stats', statsRoutes);
+
+// Rutas de carrera (plan + correlativas) → cuelgan de /api/carrera
+app.use('/api/carrera', carreraRoutes);
 
 // Primero inicializamos la base (crea las tablas). Recién cuando
 // está lista arrancamos el servidor. Si la base falla, no arrancamos.

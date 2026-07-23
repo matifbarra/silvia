@@ -118,6 +118,26 @@ async function initDb() {
     )
   `);
 
+  // Estado de cada materia DEL PLAN para cada usuario.
+  //
+  // Tabla aparte de "subjects" a propósito: podés marcar "Análisis I
+  // aprobada" sin tener que agregarla a Mis Materias (ya no la cursás).
+  // Son dos cosas distintas: tu historia académica vs. lo que llevás hoy.
+  //
+  // El UNIQUE("userId","code") es la clave del asunto: garantiza que
+  // no haya dos estados para la misma materia, y es lo que después nos
+  // habilita a hacer un UPSERT (insertar o actualizar en una sola query).
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS plan_status (
+      ${idColumn},
+      "userId"    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      "code"      INTEGER NOT NULL,
+      "status"    TEXT NOT NULL,
+      "updatedAt" TEXT NOT NULL DEFAULT (${nowDefault}),
+      UNIQUE ("userId", "code")
+    )
+  `);
+
   // ── Migración ──
   // El CREATE de arriba solo corre en instalaciones NUEVAS. Para las
   // tablas que ya existían (con datos), agregamos la columna aparte.

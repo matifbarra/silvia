@@ -11,6 +11,7 @@ import Register from './pages/Register';
 import Stats from './pages/Stats';
 import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
+import Carrera from './pages/Carrera';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/" element={<Stats />} />
         <Route path="/materias" element={<Dashboard />} />
         <Route path="/tareas" element={<Tasks />} />
+        <Route path="/carrera" element={<Carrera />} />
       </Route>
     </Routes>
   );
