@@ -12,13 +12,26 @@ export async function getSubjects() {
   return res.data;
 }
 
-export async function createSubject(name, color) {
-  const res = await api.post('/subjects', { name, color });
+// El catálogo del plan de estudio, ya agrupado por año
+export async function getPlan() {
+  const res = await api.get('/subjects/plan');
   return res.data;
 }
 
-export async function updateSubject(id, name, color) {
-  const res = await api.put(`/subjects/${id}`, { name, color });
+// Importa varias materias del plan de una sola vez.
+// codes = array con los números de materia (ej: [1, 2, 3])
+export async function importSubjects(codes) {
+  const res = await api.post('/subjects/import', { codes });
+  return res.data; // { created: [...], skipped: n }
+}
+
+export async function createSubject(name, color, year) {
+  const res = await api.post('/subjects', { name, color, year });
+  return res.data;
+}
+
+export async function updateSubject(id, name, color, year) {
+  const res = await api.put(`/subjects/${id}`, { name, color, year });
   return res.data;
 }
 

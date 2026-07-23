@@ -5,6 +5,15 @@
 // ─────────────────────────────────────────────────────────────
 
 const Subject = require('../models/Subject');
+const { PLAN_SISTEMAS, PLAN_POR_CODE, YEARS, COLOR_POR_ANIO } = require('../data/planSistemas');
+
+// Devuelve un año válido (1..5) o null si no lo es.
+// Nunca confiamos en lo que manda el cliente: alguien podría mandar
+// year: 99 o year: "hola" desde Postman.
+function normalizarAnio(valor) {
+  const n = Number(valor);
+  return YEARS.includes(n) ? n : null;
+}
 
 // GET /api/subjects → lista todas las materias del usuario
 async function getAll(req, res) {
@@ -12,9 +21,59 @@ async function getAll(req, res) {
   res.json(subjects);
 }
 
+// GET /api/subjects/plan → el catálogo del plan de estudio
+// No depende del usuario: es siempre el mismo. Lo mandamos ya agrupado
+// por año para que el frontend no tenga que hacer ese trabajo.
+async function getPlan(req, res) {
+  const porAnio = YEARS.map((year) => ({
+    year,
+    color: COLOR_POR_ANIO[year],
+    subjects: PLAN_SISTEMAS.filter((m) => m.year === year),
+  }));
+
+  res.json({ career: 'Ingeniería en Sistemas de Información', plan: '2023', years: porAnio });
+}
+
+// POST /api/subjects/import → crea varias materias del plan de una
+// Body: { codes: [1, 2, 3] }  (los "code" del plan)
+async function importFromPlan(req, res) {
+  const { codes } = req.body;
+
+  if (!Array.isArray(codes) || codes.length === 0) {
+    return res.status(400).json({ message: 'Elegí al menos una materia para importar' });
+  }
+
+  // 1) Nos quedamos solo con los codes que EXISTEN en el plan.
+  //    new Set(codes) elimina repetidos si el cliente mandó alguno dos veces.
+  const delPlan = [...new Set(codes)]
+    .map((code) => PLAN_POR_CODE.get(Number(code)))
+    .filter(Boolean);
+
+  if (delPlan.length === 0) {
+    return res.status(400).json({ message: 'Ninguna de las materias enviadas existe en el plan' });
+  }
+
+  // 2) Sacamos las que el usuario YA tiene (comparando por nombre, sin
+  //    distinguir mayúsculas) para no llenarle la lista de duplicados.
+  const yaTiene = await Subject.findNamesByUser(req.userId);
+  const nuevas = delPlan.filter((m) => !yaTiene.has(m.name.toLowerCase()));
+
+  if (nuevas.length === 0) {
+    return res.json({ created: [], skipped: delPlan.length });
+  }
+
+  // 3) Un solo INSERT con todas. El color sale del año.
+  const created = await Subject.createMany(
+    req.userId,
+    nuevas.map((m) => ({ name: m.name, color: COLOR_POR_ANIO[m.year], year: m.year }))
+  );
+
+  res.status(201).json({ created, skipped: delPlan.length - nuevas.length });
+}
+
 // POST /api/subjects → crea una materia
 async function create(req, res) {
-  const { name, color } = req.body;
+  const { name, color, year } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ message: 'El nombre de la materia es obligatorio' });
@@ -24,6 +83,7 @@ async function create(req, res) {
     userId: req.userId,
     name: name.trim(),
     color: color || 'indigo',
+    year: normalizarAnio(year),
   });
 
   res.status(201).json(subject);
@@ -31,7 +91,7 @@ async function create(req, res) {
 
 // PUT /api/subjects/:id → edita una materia
 async function update(req, res) {
-  const { name, color } = req.body;
+  const { name, color, year } = req.body;
   const id = Number(req.params.id);
 
   const existing = await Subject.findById(id, req.userId);
@@ -44,6 +104,9 @@ async function update(req, res) {
     userId: req.userId,
     name: name?.trim() || existing.name,
     color: color || existing.color,
+    // Ojo: acá NO usamos "|| existing.year" porque queremos permitir
+    // que el usuario saque el año (mandando year: null a propósito).
+    year: normalizarAnio(year),
   });
 
   res.json(updated);
@@ -61,4 +124,4 @@ async function remove(req, res) {
   res.json({ message: 'Materia eliminada', id });
 }
 
-module.exports = { getAll, create, update, remove };
+module.exports = { getAll, getPlan, importFromPlan, create, update, remove };

@@ -100,6 +100,7 @@ async function initDb() {
       "userId"    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       "name"      TEXT NOT NULL,
       "color"     TEXT NOT NULL DEFAULT 'indigo',
+      "year"      INTEGER,
       "createdAt" TEXT NOT NULL DEFAULT (${nowDefault})
     )
   `);
@@ -121,6 +122,10 @@ async function initDb() {
   // El CREATE de arriba solo corre en instalaciones NUEVAS. Para las
   // tablas que ya existían (con datos), agregamos la columna aparte.
   await ensureColumn('tasks', 'priority', "TEXT NOT NULL DEFAULT 'media'");
+  // "year" = nivel del plan de estudio (1 a 5). Va SIN "NOT NULL" a propósito:
+  // las materias que ya existían quedan en NULL ("sin año") y las materias
+  // inventadas por el usuario tampoco están obligadas a tener nivel.
+  await ensureColumn('subjects', 'year', 'INTEGER');
 
   console.log(`🗄️  Base de datos lista (${db.dialect})`);
 }

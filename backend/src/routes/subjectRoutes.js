@@ -7,15 +7,24 @@
 const express = require('express');
 const router = express.Router();
 
-const { getAll, create, update, remove } = require('../controllers/subjectController');
+const {
+  getAll,
+  getPlan,
+  importFromPlan,
+  create,
+  update,
+  remove,
+} = require('../controllers/subjectController');
 const authRequired = require('../middleware/authMiddleware');
 
 // A partir de acá, todo requiere token válido
 router.use(authRequired);
 
-router.get('/', getAll); //          GET    /api/subjects
-router.post('/', create); //         POST   /api/subjects
-router.put('/:id', update); //       PUT    /api/subjects/:id
-router.delete('/:id', remove); //    DELETE /api/subjects/:id
+router.get('/plan', getPlan); //         GET    /api/subjects/plan
+router.post('/import', importFromPlan); //POST  /api/subjects/import
+router.get('/', getAll); //              GET    /api/subjects
+router.post('/', create); //             POST   /api/subjects
+router.put('/:id', update); //           PUT    /api/subjects/:id
+router.delete('/:id', remove); //        DELETE /api/subjects/:id
 
 module.exports = router;
