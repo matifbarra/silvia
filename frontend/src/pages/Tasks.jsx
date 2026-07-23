@@ -12,6 +12,7 @@ import { getTasks, createTask, updateTask, toggleTask, deleteTask } from '../api
 import { getSubjects } from '../api/subjects';
 import { SUBJECT_COLORS } from '../constants/colors';
 import Spinner from '../components/Spinner';
+import { IconPencil, IconTrash, IconPlus, IconBell, IconClipboard } from '../components/icons';
 
 // Formatea 'YYYY-MM-DD' a 'DD/MM'
 function formatDate(iso) {
@@ -38,24 +39,29 @@ function daysUntil(iso) {
 function dueInfo(iso, done) {
   if (!iso) return null;
   const dm = formatDate(iso); // 'DD/MM'
-  if (done) return { text: dm, className: 'bg-slate-100 text-slate-400' };
+  const neutral = 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-400';
+  if (done) return { text: dm, className: neutral };
 
   const n = daysUntil(iso);
-  if (n < 0) return { text: `Vencida · ${dm}`, className: 'bg-red-100 text-red-700' };
-  if (n === 0) return { text: `Hoy · ${dm}`, className: 'bg-red-50 text-red-600' };
-  if (n === 1) return { text: `Mañana · ${dm}`, className: 'bg-amber-100 text-amber-700' };
-  if (n <= 3) return { text: `En ${n} días · ${dm}`, className: 'bg-amber-50 text-amber-600' };
-  return { text: dm, className: 'bg-slate-100 text-slate-500' };
+  if (n < 0) return { text: `Vencida · ${dm}`, className: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300' };
+  if (n === 0) return { text: `Hoy · ${dm}`, className: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300' };
+  if (n === 1) return { text: `Mañana · ${dm}`, className: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' };
+  if (n <= 3) return { text: `En ${n} días · ${dm}`, className: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300' };
+  return { text: dm, className: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300' };
 }
 
 // Config de prioridades: etiqueta y colores. Clases completas para que
 // Tailwind las incluya (igual que en constants/colors.js).
 const PRIORITIES = {
-  alta: { label: 'Alta', dot: 'bg-red-500', text: 'text-red-600' },
-  media: { label: 'Media', dot: 'bg-amber-500', text: 'text-amber-600' },
-  baja: { label: 'Baja', dot: 'bg-slate-400', text: 'text-slate-500' },
+  alta: { label: 'Alta', dot: 'bg-red-500', text: 'text-red-600 dark:text-red-400' },
+  media: { label: 'Media', dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400' },
+  baja: { label: 'Baja', dot: 'bg-slate-400', text: 'text-slate-500 dark:text-slate-400' },
 };
 const PRIORITY_KEYS = Object.keys(PRIORITIES); // ['alta','media','baja']
+
+// Estilo compartido de inputs/selects (para no repetir el string enorme)
+const FIELD =
+  'px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-4 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition dark:bg-slate-900 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-500';
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -183,7 +189,9 @@ export default function Tasks() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">Mis tareas</h2>
+      <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">
+        Mis tareas
+      </h2>
       <p className="text-slate-500 dark:text-slate-400 mb-6">
         {pendingCount === 0
           ? '¡No tenés tareas pendientes! 🎉'
@@ -194,46 +202,46 @@ export default function Tasks() {
 
       {/* Aviso de urgentes: solo aparece si hay algo que vence hoy o vencido */}
       {urgentCount > 0 && (
-        <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          🔔 Tenés <strong>{urgentCount}</strong> tarea{urgentCount === 1 ? '' : 's'} que
-          vence{urgentCount === 1 ? '' : 'n'} hoy o ya está{urgentCount === 1 ? '' : 'n'} vencida
-          {urgentCount === 1 ? '' : 's'}.
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">
+          <IconBell className="w-5 h-5 shrink-0" />
+          <span>
+            Tenés <strong className="font-semibold">{urgentCount}</strong> tarea
+            {urgentCount === 1 ? '' : 's'} que vence{urgentCount === 1 ? '' : 'n'} hoy o ya está
+            {urgentCount === 1 ? '' : 'n'} vencida{urgentCount === 1 ? '' : 's'}.
+          </span>
         </div>
       )}
 
       {/* Formulario para agregar tarea */}
       <form
         onSubmit={handleAdd}
-        className="bg-white rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 p-4 mb-6 flex flex-col sm:flex-row gap-3 sm:items-end"
+        className="bg-white rounded-2xl border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700 p-4 mb-6 flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap gap-3 sm:items-end"
       >
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tarea</label>
+        <div className="flex-1 sm:min-w-[220px]">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            Tarea
+          </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Ej: Estudiar capítulo 3"
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"
+            className={`w-full ${FIELD}`}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Entrega</label>
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"
-          />
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            Entrega
+          </label>
+          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={FIELD} />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Materia</label>
-          <select
-            value={subjectId}
-            onChange={(e) => setSubjectId(e.target.value)}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400 bg-white"
-          >
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            Materia
+          </label>
+          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className={`${FIELD} bg-white`}>
             <option value="">Sin materia</option>
             {subjects.map((s) => (
               <option key={s.id} value={s.id}>
@@ -244,12 +252,10 @@ export default function Tasks() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Prioridad</label>
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value)}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400 bg-white"
-          >
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            Prioridad
+          </label>
+          <select value={priority} onChange={(e) => setPriority(e.target.value)} className={`${FIELD} bg-white`}>
             {PRIORITY_KEYS.map((key) => (
               <option key={key} value={key}>
                 {PRIORITIES[key].label}
@@ -261,9 +267,10 @@ export default function Tasks() {
         <button
           type="submit"
           disabled={saving}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2 rounded-lg transition disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-700 active:scale-[.98] text-white font-semibold px-5 py-2.5 rounded-xl shadow-sm transition disabled:opacity-60 cursor-pointer"
         >
-          {saving ? 'Agregando...' : '+ Agregar'}
+          <IconPlus className="w-4 h-4" />
+          {saving ? 'Agregando...' : 'Agregar'}
         </button>
       </form>
 
@@ -277,9 +284,9 @@ export default function Tasks() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+            className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition cursor-pointer ${
               filter === f.key
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-violet-600 text-white shadow-sm'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700'
             }`}
           >
@@ -292,11 +299,14 @@ export default function Tasks() {
       {loading ? (
         <Spinner label="Cargando tareas..." />
       ) : visibleTasks.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-300 dark:bg-slate-800 dark:border-slate-600">
-          <p className="text-slate-400">No hay tareas para mostrar acá.</p>
+        <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+          <div className="mx-auto w-12 h-12 grid place-items-center rounded-full bg-violet-50 text-violet-500 dark:bg-violet-500/10 mb-3">
+            <IconClipboard className="w-6 h-6" />
+          </div>
+          <p className="text-slate-500 dark:text-slate-400">No hay tareas para mostrar acá.</p>
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2.5">
           {visibleTasks.map((task) => {
             const c = task.subjectColor
               ? SUBJECT_COLORS[task.subjectColor] || SUBJECT_COLORS.indigo
@@ -309,7 +319,7 @@ export default function Tasks() {
               return (
                 <li
                   key={task.id}
-                  className="bg-white rounded-xl border border-slate-300 dark:bg-slate-800 dark:border-slate-600 p-4 flex flex-col sm:flex-row gap-3 sm:items-end"
+                  className="bg-white rounded-2xl border border-violet-300 shadow-sm dark:bg-slate-800 dark:border-violet-500/40 p-4 flex flex-col sm:flex-row gap-3 sm:items-end"
                 >
                   <div className="flex-1">
                     <input
@@ -321,19 +331,19 @@ export default function Tasks() {
                         if (e.key === 'Enter') handleUpdate(task.id);
                         if (e.key === 'Escape') cancelEdit();
                       }}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"
+                      className={`w-full ${FIELD}`}
                     />
                   </div>
                   <input
                     type="date"
                     value={editDueDate}
                     onChange={(e) => setEditDueDate(e.target.value)}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"
+                    className={FIELD}
                   />
                   <select
                     value={editSubjectId}
                     onChange={(e) => setEditSubjectId(e.target.value)}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400 bg-white"
+                    className={`${FIELD} bg-white`}
                   >
                     <option value="">Sin materia</option>
                     {subjects.map((s) => (
@@ -345,7 +355,7 @@ export default function Tasks() {
                   <select
                     value={editPriority}
                     onChange={(e) => setEditPriority(e.target.value)}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400 bg-white"
+                    className={`${FIELD} bg-white`}
                   >
                     {PRIORITY_KEYS.map((key) => (
                       <option key={key} value={key}>
@@ -356,13 +366,13 @@ export default function Tasks() {
                   <div className="flex gap-2 justify-end">
                     <button
                       onClick={cancelEdit}
-                      className="px-3 py-2 text-sm rounded-lg text-slate-600 hover:bg-slate-100 transition"
+                      className="px-3 py-2 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={() => handleUpdate(task.id)}
-                      className="px-4 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition"
+                      className="px-4 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold transition cursor-pointer"
                     >
                       Guardar
                     </button>
@@ -375,19 +385,19 @@ export default function Tasks() {
             return (
               <li
                 key={task.id}
-                className="group bg-white rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 p-4 flex items-center gap-3 transition hover:border-slate-300 hover:shadow-sm"
+                className="group bg-white rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 p-4 flex items-center gap-3 transition hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm"
               >
                 {/* Checkbox para marcar hecha */}
                 <input
                   type="checkbox"
                   checked={!!task.done}
                   onChange={() => handleToggle(task.id)}
-                  className="w-5 h-5 rounded accent-indigo-600 cursor-pointer"
+                  className="w-5 h-5 rounded accent-violet-600 cursor-pointer shrink-0"
                 />
 
                 {/* Título (tachado si está hecha) */}
                 <span
-                  className={`flex-1 ${
+                  className={`flex-1 min-w-0 truncate font-medium ${
                     task.done ? 'line-through text-slate-400' : 'text-slate-800 dark:text-slate-100'
                   }`}
                 >
@@ -396,7 +406,7 @@ export default function Tasks() {
 
                 {/* Prioridad (puntito de color + etiqueta) */}
                 <span
-                  className={`flex items-center gap-1.5 text-xs font-medium ${p.text}`}
+                  className={`hidden sm:flex items-center gap-1.5 text-xs font-semibold shrink-0 ${p.text}`}
                   title={`Prioridad ${p.label.toLowerCase()}`}
                 >
                   <span className={`w-2 h-2 rounded-full ${p.dot}`} />
@@ -405,7 +415,7 @@ export default function Tasks() {
 
                 {/* Badge de materia */}
                 {task.subjectName && (
-                  <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">
                     <span className={`w-2 h-2 rounded-full ${c.dot}`} />
                     {task.subjectName}
                   </span>
@@ -413,28 +423,32 @@ export default function Tasks() {
 
                 {/* Fecha de entrega (texto y color según cuán cerca vence) */}
                 {due && (
-                  <span className={`text-xs font-medium px-2 py-1 rounded ${due.className}`}>
+                  <span
+                    className={`text-xs font-semibold px-2 py-1 rounded-lg shrink-0 ${due.className}`}
+                  >
                     {due.text}
                   </span>
                 )}
 
-                {/* Editar */}
-                <button
-                  onClick={() => startEdit(task)}
-                  className="text-slate-400 hover:text-indigo-600 transition text-sm opacity-0 group-hover:opacity-100"
-                  title="Editar"
-                >
-                  ✏️
-                </button>
-
-                {/* Borrar */}
-                <button
-                  onClick={() => handleDelete(task.id, task.title)}
-                  className="text-slate-400 hover:text-red-600 transition text-sm opacity-0 group-hover:opacity-100"
-                  title="Eliminar"
-                >
-                  ✕
-                </button>
+                {/* Acciones: siempre visibles en mobile, aparecen al hover en desktop */}
+                <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition">
+                  <button
+                    onClick={() => startEdit(task)}
+                    className="grid place-items-center w-8 h-8 rounded-lg text-slate-400 hover:text-violet-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+                    title="Editar"
+                    aria-label={`Editar ${task.title}`}
+                  >
+                    <IconPencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(task.id, task.title)}
+                    className="grid place-items-center w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+                    title="Eliminar"
+                    aria-label={`Eliminar ${task.title}`}
+                  >
+                    <IconTrash className="w-4 h-4" />
+                  </button>
+                </div>
               </li>
             );
           })}

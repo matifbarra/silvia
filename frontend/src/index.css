@@ -1,21 +1,36 @@
+/* Tipografía profesional para SaaS: Plus Jakarta Sans (Google Fonts).
+   Los @import van SIEMPRE arriba de todo en CSS. */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 /* ─── Modo oscuro por CLASE (no solo por preferencia del sistema) ───
-   Por defecto, Tailwind v4 activa `dark:` según prefers-color-scheme.
-   Con esta variante, `dark:` se activa cuando hay una clase `.dark` en
-   un ancestro (en nuestro caso, en <html>). Así podemos togglearlo a mano
-   y, además, guardarlo en localStorage. */
+   `dark:` se activa cuando hay una clase `.dark` en un ancestro (en <html>).
+   Así podemos togglearlo a mano y guardarlo en localStorage. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Registramos la fuente como la "sans" por defecto de Tailwind.
+   Con esto, todo el texto usa Plus Jakarta Sans sin tocar cada clase. */
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
 /* Colores base de la "tela de fondo" y el texto por defecto.
-   Al cambiar la clase .dark en <html>, todo esto se invierte solo. */
+   El fondo oscuro es slate-950 (más profundo) para que las tarjetas
+   (slate-800) resalten mejor. Al cambiar .dark en <html>, se invierte solo. */
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100;
+    @apply bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 antialiased;
   }
   /* Transición suave al cambiar de tema (queda prolijo) */
   body,
   body * {
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+  /* Respetamos a quien prefiere menos animación (accesibilidad) */
+  @media (prefers-reduced-motion: reduce) {
+    body,
+    body * {
+      transition: none !important;
+    }
   }
 }

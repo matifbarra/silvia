@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { useState } from 'react';
+import { IconSun, IconMoon } from './icons';
 
 export default function ThemeToggle() {
   // Estado inicial = ¿el <html> ya tiene la clase .dark? (la puso el
@@ -25,10 +26,11 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggle}
-      title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-      className="text-lg leading-none p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+      aria-label={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+      title={dark ? 'Modo claro' : 'Modo oscuro'}
+      className="grid place-items-center w-9 h-9 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
     >
-      {dark ? '☀️' : '🌙'}
+      {dark ? <IconSun className="w-5 h-5" /> : <IconMoon className="w-5 h-5" />}
     </button>
   );
 }
