@@ -75,16 +75,30 @@ Abrí la URL del frontend, registrate y usá la app. 🎉
 
 ---
 
-## ⚠️ Importante sobre los datos (plan gratis)
+## 🗄️ Base de datos PostgreSQL (persistente)
 
-En el plan **free** de Render:
-- El backend **se duerme** tras 15 min sin uso. La primera visita después tarda ~30s en despertar (es normal).
-- **El disco es efímero**: en cada redeploy o al despertar, el archivo SQLite puede reiniciarse → se pierden los datos.
+El código ahora soporta **las dos bases** automáticamente:
+- **En tu compu** (sin `DATABASE_URL`) → usa **SQLite** (sin instalar nada).
+- **En Render** (con `DATABASE_URL`) → usa **PostgreSQL** (datos permanentes).
 
-Esto está bien para **mostrar/probar** el proyecto. Para que los datos **persistan de verdad**, tenés 2 caminos (más adelante):
+El `render.yaml` ya define una base Postgres (`silvia-db`) y la conecta al backend
+por la variable `DATABASE_URL`. Para activarla, hay que **sincronizar el blueprint**:
 
-1. **Disco persistente** (Render, plan pago ~US$1/mes): agregás un disco, lo montás en `/var/data`, y descomentás `DATABASE_DIR` en `render.yaml`.
-2. **Base en la nube**: migrar de SQLite a PostgreSQL (Render tiene Postgres gratis por tiempo limitado). Es un cambio de código que podemos hacer como un bloque aparte.
+### Pasos en Render para activar Postgres
+
+1. Hacé `git push` (ver más abajo) para subir los cambios.
+2. En Render, entrá a tu **Blueprint** (`silvia`) → botón **Manual Sync**.
+   - Render detecta la base nueva `silvia-db` y la crea.
+   - Conecta `DATABASE_URL` al backend automáticamente.
+3. El backend redeploya solo y arranca con Postgres. Lo confirmás en sus **Logs**:
+   deberías ver `🗄️  Base de datos lista (postgres)`.
+4. Listo: los datos ahora **persisten** aunque el servicio se reinicie. 🎉
+
+> ⚠️ El backend igual **se duerme** tras 15 min sin uso (plan free): la primera
+> visita tarda ~30s en despertar. Eso es normal y no afecta los datos.
+>
+> ⚠️ La base Postgres **gratis** de Render tiene vencimiento (~30 días); después
+> hay que renovarla o pasar a un plan pago. Para un proyecto de portafolio está perfecto.
 
 ---
 

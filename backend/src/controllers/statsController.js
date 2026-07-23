@@ -5,8 +5,8 @@
 
 const Stats = require('../models/Stats');
 
-function getStats(req, res) {
-  const stats = Stats.getForUser(req.userId);
+async function getStats(req, res) {
+  const stats = await Stats.getForUser(req.userId);
   res.json(stats);
 }
 

@@ -4,6 +4,13 @@
 # Este proyecto tiene dos: el backend (Node) y el frontend (estático).
 # ─────────────────────────────────────────────────────────────
 
+# Base de datos PostgreSQL (persistente, plan gratis)
+databases:
+  - name: silvia-db
+    plan: free
+    databaseName: silvia
+    user: silvia
+
 services:
   # ─── Backend (API Node/Express) ────────────────────────────
   - type: web
@@ -21,9 +28,12 @@ services:
         generateValue: true # Render genera un secreto seguro solo
       - key: FRONTEND_URL
         sync: false # lo completás a mano con la URL del frontend
-      # Descomentá esto SOLO si agregás un disco persistente (plan pago):
-      # - key: DATABASE_DIR
-      #   value: /var/data
+      # DATABASE_URL se conecta SOLO a la base de arriba. Cuando esta
+      # variable existe, el backend usa Postgres (si no, usa SQLite local).
+      - key: DATABASE_URL
+        fromDatabase:
+          name: silvia-db
+          property: connectionString
 
   # ─── Frontend (React compilado, sitio estático) ────────────
   - type: web

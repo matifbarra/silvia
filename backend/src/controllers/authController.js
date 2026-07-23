@@ -31,7 +31,7 @@ async function register(req, res) {
     }
 
     // 2. Verificar que el email no esté ya registrado
-    if (User.findByEmail(email)) {
+    if (await User.findByEmail(email)) {
       return res.status(409).json({ message: 'Ese email ya está registrado' });
     }
 
@@ -39,7 +39,7 @@ async function register(req, res) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // 4. Crear el usuario
-    const user = User.create({ name, email, passwordHash });
+    const user = await User.create({ name, email, passwordHash });
 
     // 5. Generar el token
     const token = generateToken(user.id);
@@ -67,7 +67,7 @@ async function login(req, res) {
     }
 
     // 1. Buscar el usuario
-    const user = User.findByEmail(email);
+    const user = await User.findByEmail(email);
     // Nota: damos el mismo mensaje si el email no existe o si la password
     // es incorrecta, para no revelar qué emails están registrados.
     if (!user) {
@@ -96,8 +96,8 @@ async function login(req, res) {
 // ─── GET /api/auth/me ──────────────────────────────────────────
 // Ruta PROTEGIDA: solo funciona con un token válido.
 // El middleware ya puso el id del usuario en req.userId.
-function me(req, res) {
-  const user = User.findById(req.userId);
+async function me(req, res) {
+  const user = await User.findById(req.userId);
   if (!user) {
     return res.status(404).json({ message: 'Usuario no encontrado' });
   }

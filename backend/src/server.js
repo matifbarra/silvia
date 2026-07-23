@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-require('./db/database'); // abre la base y crea las tablas al arrancar
+const { initDb } = require('./db/database');
 
 const authRoutes = require('./routes/authRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
@@ -39,7 +39,15 @@ app.use('/api/tasks', taskRoutes);
 // Rutas de estadísticas → cuelgan de /api/stats (protegida)
 app.use('/api/stats', statsRoutes);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+// Primero inicializamos la base (crea las tablas). Recién cuando
+// está lista arrancamos el servidor. Si la base falla, no arrancamos.
+initDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ Error inicializando la base de datos:', err);
+    process.exit(1);
+  });

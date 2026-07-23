@@ -1,27 +1,28 @@
 // ─────────────────────────────────────────────────────────────
-// MODELO DE ESTADÍSTICAS
-// No guarda datos nuevos: solo RESUME lo que ya hay con funciones
-// de agregación de SQL (COUNT, SUM, GROUP BY). Todo filtrado por
-// userId para que cada uno vea solo sus propios números.
+// MODELO DE ESTADÍSTICAS — async, SQLite/Postgres
+// Detalles importantes para que ande en ambas bases:
+//  - CAST(COUNT(...) AS INTEGER): Postgres devuelve los COUNT como
+//    texto por defecto; el CAST los normaliza a número en las dos.
+//  - "today" lo calculamos en JS y lo pasamos como parámetro, así
+//    evitamos funciones de fecha distintas entre bases.
 // ─────────────────────────────────────────────────────────────
 
-const db = require('../db/database');
+const { db } = require('../db/database');
 
 const Stats = {
-  getForUser(userId) {
-    // ─── Números generales ───────────────────────────────────
-    // Subconsultas: cada (SELECT ...) devuelve un único número.
-    const totals = db
-      .prepare(
-        `SELECT
-           (SELECT COUNT(*) FROM subjects WHERE userId = @u)                         AS totalSubjects,
-           (SELECT COUNT(*) FROM tasks    WHERE userId = @u)                         AS totalTasks,
-           (SELECT COUNT(*) FROM tasks    WHERE userId = @u AND done = 1)            AS doneTasks,
-           (SELECT COUNT(*) FROM tasks    WHERE userId = @u AND done = 0
-                                            AND dueDate IS NOT NULL
-                                            AND dueDate < date('now'))               AS overdueTasks`
-      )
-      .get({ u: userId });
+  async getForUser(userId) {
+    const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+
+    const totals = await db.get(
+      `SELECT
+         (SELECT CAST(COUNT(*) AS INTEGER) FROM subjects WHERE "userId" = ?) AS "totalSubjects",
+         (SELECT CAST(COUNT(*) AS INTEGER) FROM tasks    WHERE "userId" = ?) AS "totalTasks",
+         (SELECT CAST(COUNT(*) AS INTEGER) FROM tasks    WHERE "userId" = ? AND "done" = 1) AS "doneTasks",
+         (SELECT CAST(COUNT(*) AS INTEGER) FROM tasks    WHERE "userId" = ? AND "done" = 0
+                                             AND "dueDate" IS NOT NULL
+                                             AND "dueDate" < ?) AS "overdueTasks"`,
+      [userId, userId, userId, userId, today]
+    );
 
     const pendingTasks = totals.totalTasks - totals.doneTasks;
     const progress =
@@ -29,23 +30,20 @@ const Stats = {
         ? Math.round((totals.doneTasks / totals.totalTasks) * 100)
         : 0;
 
-    // ─── Tareas por materia (GROUP BY) ───────────────────────
-    // LEFT JOIN desde subjects para incluir materias con 0 tareas.
-    const perSubject = db
-      .prepare(
-        `SELECT
-           s.id    AS subjectId,
-           s.name  AS name,
-           s.color AS color,
-           COUNT(t.id)                                AS total,
-           SUM(CASE WHEN t.done = 1 THEN 1 ELSE 0 END) AS done
-         FROM subjects s
-         LEFT JOIN tasks t ON t.subjectId = s.id AND t.userId = s.userId
-         WHERE s.userId = ?
-         GROUP BY s.id
-         ORDER BY total DESC, s.name ASC`
-      )
-      .all(userId);
+    const perSubject = await db.query(
+      `SELECT
+         s.id      AS "subjectId",
+         s."name"  AS "name",
+         s."color" AS "color",
+         CAST(COUNT(t.id) AS INTEGER)                                 AS "total",
+         CAST(SUM(CASE WHEN t."done" = 1 THEN 1 ELSE 0 END) AS INTEGER) AS "done"
+       FROM subjects s
+       LEFT JOIN tasks t ON t."subjectId" = s.id AND t."userId" = s."userId"
+       WHERE s."userId" = ?
+       GROUP BY s.id, s."name", s."color"
+       ORDER BY "total" DESC, s."name" ASC`,
+      [userId]
+    );
 
     return {
       totalSubjects: totals.totalSubjects,

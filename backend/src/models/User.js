@@ -1,35 +1,27 @@
 // ─────────────────────────────────────────────────────────────
-// MODELO DE USUARIO (ahora con SQLite)
-// ¡Mismas funciones que antes (create/findByEmail/findById)!
-// Por eso el resto de la app no se enteró del cambio. Lo único
-// distinto es que por dentro ahora hablamos SQL con la base real.
-//
-// db.prepare(...) "prepara" una consulta SQL. Los signos ?
-// son huecos que se rellenan con .run()/.get() — esto evita
-// la inyección SQL (nunca pegamos valores directo en el texto).
+// MODELO DE USUARIO
+// Ahora las funciones son async (devuelven Promise) porque la capa
+// de base es async. Usamos "?" como placeholder y comillas dobles
+// en columnas camelCase (funciona en SQLite y Postgres).
+// RETURNING * nos devuelve la fila recién insertada en ambas bases.
 // ─────────────────────────────────────────────────────────────
 
-const db = require('../db/database');
+const { db } = require('../db/database');
 
 const User = {
-  // INSERT: crea un usuario y devuelve el registro completo
-  create({ name, email, passwordHash }) {
-    const stmt = db.prepare(
-      'INSERT INTO users (name, email, passwordHash) VALUES (?, ?, ?)'
+  async create({ name, email, passwordHash }) {
+    return db.get(
+      'INSERT INTO users ("name", "email", "passwordHash") VALUES (?, ?, ?) RETURNING *',
+      [name, email, passwordHash]
     );
-    const result = stmt.run(name, email, passwordHash);
-    // result.lastInsertRowid = el id que SQLite le asignó
-    return this.findById(result.lastInsertRowid);
   },
 
-  // SELECT por email (devuelve undefined si no existe)
-  findByEmail(email) {
-    return db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  async findByEmail(email) {
+    return db.get('SELECT * FROM users WHERE "email" = ?', [email]);
   },
 
-  // SELECT por id
-  findById(id) {
-    return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+  async findById(id) {
+    return db.get('SELECT * FROM users WHERE id = ?', [id]);
   },
 };
 

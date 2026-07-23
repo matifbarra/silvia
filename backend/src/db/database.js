@@ -1,60 +1,122 @@
 // ─────────────────────────────────────────────────────────────
-// CONEXIÓN A LA BASE DE DATOS (SQLite)
-// better-sqlite3 abre (o crea) un archivo .db y nos deja correr SQL.
-// Es síncrono: cada consulta devuelve el resultado al instante,
-// sin promesas ni async/await. Ideal para aprender.
+// CAPA DE BASE DE DATOS (soporta SQLite y PostgreSQL)
+//
+// Idea: un mismo código de modelos sirve para las dos bases.
+//   - Si existe DATABASE_URL (Render)  → usamos PostgreSQL (async)
+//   - Si no (tu compu)                 → usamos SQLite (sin instalar nada)
+//
+// Exponemos 3 funciones async unificadas: query / get / run.
+// Los modelos escriben SQL con placeholders "?" y comillas dobles
+// en los nombres de columnas (ej: "userId"). Eso funciona en ambas:
+// SQLite y Postgres respetan las comillas dobles como identificadores.
+// Para Postgres, traducimos los "?" a $1, $2, ... automáticamente.
 // ─────────────────────────────────────────────────────────────
 
-const Database = require('better-sqlite3');
-const path = require('path');
+const usePostgres = !!process.env.DATABASE_URL;
 
-// Dónde guardar el archivo de la base:
-// - En local: junto a este archivo (backend/src/db/silvia.db)
-// - En producción: en DATABASE_DIR (ej: un disco persistente de Render)
-const dbDir = process.env.DATABASE_DIR || __dirname;
-const dbPath = path.join(dbDir, 'silvia.db');
-const db = new Database(dbPath);
+// Traduce los "?" a $1, $2, ... (lo que espera Postgres)
+function toPgPlaceholders(sql) {
+  let i = 0;
+  return sql.replace(/\?/g, () => `$${++i}`);
+}
 
-// Mejora la concurrencia y el rendimiento (modo recomendado)
-db.pragma('journal_mode = WAL');
-// Hace que SQLite respete las foreign keys (relaciones entre tablas)
-db.pragma('foreign_keys = ON');
+let db; // { query, get, run } — todas async
 
-// ─── Creación de tablas ────────────────────────────────────────
-// "IF NOT EXISTS" = solo las crea la primera vez. En arranques
-// siguientes no hace nada, así que es seguro correr esto siempre.
+if (usePostgres) {
+  // ─── PostgreSQL ────────────────────────────────────────────
+  const { Pool } = require('pg');
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    // Render exige SSL. En una base local no haría falta.
+    ssl: process.env.DATABASE_URL.includes('localhost')
+      ? false
+      : { rejectUnauthorized: false },
+  });
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    name         TEXT    NOT NULL,
-    email        TEXT    NOT NULL UNIQUE,
-    passwordHash TEXT    NOT NULL,
-    createdAt    TEXT    NOT NULL DEFAULT (datetime('now'))
-  );
+  db = {
+    dialect: 'postgres',
+    async query(sql, params = []) {
+      const res = await pool.query(toPgPlaceholders(sql), params);
+      return res.rows;
+    },
+    async get(sql, params = []) {
+      const res = await pool.query(toPgPlaceholders(sql), params);
+      return res.rows[0];
+    },
+    async run(sql, params = []) {
+      const res = await pool.query(toPgPlaceholders(sql), params);
+      return { changes: res.rowCount, rows: res.rows };
+    },
+  };
+} else {
+  // ─── SQLite ────────────────────────────────────────────────
+  const Database = require('better-sqlite3');
+  const path = require('path');
 
-  CREATE TABLE IF NOT EXISTS subjects (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    userId    INTEGER NOT NULL,
-    name      TEXT    NOT NULL,
-    color     TEXT    NOT NULL DEFAULT 'indigo',
-    createdAt TEXT    NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
-  );
+  const dbDir = process.env.DATABASE_DIR || __dirname;
+  const sqlite = new Database(path.join(dbDir, 'silvia.db'));
+  sqlite.pragma('journal_mode = WAL');
+  sqlite.pragma('foreign_keys = ON');
 
-  CREATE TABLE IF NOT EXISTS tasks (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    userId    INTEGER NOT NULL,
-    subjectId INTEGER,                              -- puede ser NULL (tarea sin materia)
-    title     TEXT    NOT NULL,
-    dueDate   TEXT,                                 -- fecha de entrega (YYYY-MM-DD), opcional
-    done      INTEGER NOT NULL DEFAULT 0,           -- 0 = pendiente, 1 = hecha
-    createdAt TEXT    NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (userId)    REFERENCES users(id)    ON DELETE CASCADE,
-    FOREIGN KEY (subjectId) REFERENCES subjects(id) ON DELETE CASCADE
-  );
-`);
+  // better-sqlite3 es síncrono; lo envolvemos en funciones async
+  // para que los modelos usen la misma interfaz que con Postgres.
+  db = {
+    dialect: 'sqlite',
+    async query(sql, params = []) {
+      return sqlite.prepare(sql).all(...params);
+    },
+    async get(sql, params = []) {
+      return sqlite.prepare(sql).get(...params);
+    },
+    async run(sql, params = []) {
+      const info = sqlite.prepare(sql).run(...params);
+      return { changes: info.changes, rows: [] };
+    },
+  };
+}
 
-console.log('🗄️  Base de datos SQLite lista');
+// ─── Creación de tablas (DDL específico por base) ────────────
+// La única diferencia real entre bases es cómo se declara el id
+// autoincremental y el tipo de fecha por defecto.
+async function initDb() {
+  const idColumn = usePostgres
+    ? 'id SERIAL PRIMARY KEY'
+    : 'id INTEGER PRIMARY KEY AUTOINCREMENT';
+  const nowDefault = usePostgres ? "NOW()::text" : "datetime('now')";
 
-module.exports = db;
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      ${idColumn},
+      "name"         TEXT NOT NULL,
+      "email"        TEXT NOT NULL UNIQUE,
+      "passwordHash" TEXT NOT NULL,
+      "createdAt"    TEXT NOT NULL DEFAULT (${nowDefault})
+    )
+  `);
+
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS subjects (
+      ${idColumn},
+      "userId"    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      "name"      TEXT NOT NULL,
+      "color"     TEXT NOT NULL DEFAULT 'indigo',
+      "createdAt" TEXT NOT NULL DEFAULT (${nowDefault})
+    )
+  `);
+
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      ${idColumn},
+      "userId"    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      "subjectId" INTEGER REFERENCES subjects(id) ON DELETE CASCADE,
+      "title"     TEXT NOT NULL,
+      "dueDate"   TEXT,
+      "done"      INTEGER NOT NULL DEFAULT 0,
+      "createdAt" TEXT NOT NULL DEFAULT (${nowDefault})
+    )
+  `);
+
+  console.log(`🗄️  Base de datos lista (${db.dialect})`);
+}
+
+module.exports = { db, initDb };
