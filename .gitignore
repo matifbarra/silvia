@@ -1,0 +1,19 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno (secretos) — nunca subir
+.env
+.env.local
+.env.*.local
+
+# Base de datos SQLite local
+*.db
+*.db-shm
+*.db-wal
+
+# Build del frontend
+dist/
+
+# Sistema
+.DS_Store
+Thumbs.db

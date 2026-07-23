@@ -1,0 +1,44 @@
+# ─────────────────────────────────────────────────────────────
+# BLUEPRINT DE RENDER
+# Render lee este archivo y crea los servicios definidos acá.
+# Este proyecto tiene dos: el backend (Node) y el frontend (estático).
+# ─────────────────────────────────────────────────────────────
+
+services:
+  # ─── Backend (API Node/Express) ────────────────────────────
+  - type: web
+    name: silvia-backend
+    runtime: node
+    rootDir: backend # el package.json del backend está en /backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health # Render verifica que el server esté vivo acá
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true # Render genera un secreto seguro solo
+      - key: FRONTEND_URL
+        sync: false # lo completás a mano con la URL del frontend
+      # Descomentá esto SOLO si agregás un disco persistente (plan pago):
+      # - key: DATABASE_DIR
+      #   value: /var/data
+
+  # ─── Frontend (React compilado, sitio estático) ────────────
+  - type: web
+    name: silvia-frontend
+    runtime: static
+    rootDir: frontend # el package.json del frontend está en /frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist # Vite compila a la carpeta dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false # lo completás a mano con la URL del backend + /api
+    routes:
+      # React Router maneja las rutas del lado del cliente. Sin esta
+      # regla, entrar directo a /tareas daría 404. Acá redirigimos
+      # TODO a index.html para que React se encargue de la ruta.
+      - type: rewrite
+        source: /*
+        destination: /index.html
