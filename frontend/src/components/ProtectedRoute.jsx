@@ -13,8 +13,8 @@ export default function ProtectedRoute({ children }) {
   // Todavía estamos verificando si había sesión → esperamos
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500">
-        Cargando...
+      <div className="min-h-screen flex items-center justify-center font-mono text-sm text-slate-500">
+        cargando<span className="caret">_</span>
       </div>
     );
   }

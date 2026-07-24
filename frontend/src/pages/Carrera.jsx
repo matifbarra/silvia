@@ -15,7 +15,17 @@ import { getCarrera, setStatus } from '../api/carrera';
 import { ESTADOS, ESTADO_KEYS, VISTAS } from '../constants/estados';
 import { yearLabel, YEAR_BADGE } from '../constants/years';
 import Spinner from '../components/Spinner';
-import { IconCheck, IconLock, IconChevron, IconRoute } from '../components/icons';
+import Meter from '../components/Meter';
+import Select from '../components/Select';
+import { useCountUp } from '../hooks/useCountUp';
+import { IconCheck, IconLock, IconChevron, IconLayers } from '../components/icons';
+
+// Opciones de estado para los <Select> (con su puntito de color).
+const ESTADO_OPTIONS = ESTADO_KEYS.map((k) => ({
+  value: k,
+  label: ESTADOS[k].label,
+  dot: ESTADOS[k].dot,
+}));
 
 export default function Carrera() {
   const [data, setData] = useState(null);
@@ -63,62 +73,62 @@ export default function Carrera() {
     );
   }, [data]);
 
-  if (loading) return <Spinner label="Cargando tu carrera..." />;
+  // El % de carrera aprobada, calculado antes de los early-return para que
+  // el hook de count-up se llame siempre en el mismo orden (regla de hooks).
+  const porcentaje = data ? Math.round((data.counts.aprobada / data.total) * 100) : 0;
+  const porcentajeAnim = useCountUp(porcentaje);
+
+  if (loading) return <Spinner label="cargando tu carrera" />;
   if (!data) {
     return (
-      <p className="text-center py-16 text-slate-500 dark:text-slate-400">
-        No se pudo cargar el plan de estudio.
+      <p className="font-mono text-center py-16 text-sm text-slate-500 dark:text-slate-400">
+        ! no se pudo cargar el plan de estudio
       </p>
     );
   }
 
   const { counts, total } = data;
-  const porcentaje = Math.round((counts.aprobada / total) * 100);
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-1">
-        <span className="grid place-items-center w-9 h-9 rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400">
-          <IconRoute className="w-5 h-5" />
+      <div className="flex items-center gap-3 mb-2">
+        <span className="grid place-items-center w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-600/25">
+          <IconLayers className="w-5 h-5" />
         </span>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Mi carrera
-        </h2>
+        <div>
+          <p className="eyebrow">// carrera</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+            Mi carrera
+          </h2>
+        </div>
       </div>
-      <p className="text-slate-500 dark:text-slate-400 mb-6">
-        {data.career} · Plan {data.plan}
+      <p className="font-mono text-sm text-slate-500 dark:text-slate-400 mb-6">
+        {data.career} · plan {data.plan}
       </p>
 
       {/* ── Progreso ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700 p-5 mb-6">
-        <div className="flex items-end justify-between gap-3 mb-3">
+      <div className="card reveal p-6 mb-6">
+        <div className="flex items-end justify-between gap-3 mb-4">
           <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-              Progreso de la carrera
-            </p>
-            <p className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white tabular-nums">
-              {porcentaje}%
+            <p className="eyebrow mb-1">progreso · aprobadas</p>
+            <p className="font-mono text-4xl font-semibold tracking-tight text-slate-900 dark:text-white">
+              {porcentajeAnim}<span className="text-mint-500">%</span>
             </p>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 tabular-nums">
-            {counts.aprobada} de {total} aprobadas
+          <p className="font-mono text-sm text-slate-500 dark:text-slate-400">
+            {counts.aprobada}/{total} materias
           </p>
         </div>
 
-        <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500"
-            style={{ width: `${porcentaje}%` }}
-          />
-        </div>
+        <Meter value={porcentaje} color="mint" className="h-3" />
 
         {/* Desglose por estado */}
-        <div className="flex flex-wrap gap-x-5 gap-y-2 mt-4">
+        <div className="flex flex-wrap gap-x-5 gap-y-2 mt-5">
           {ESTADO_KEYS.map((key) => (
             <span key={key} className="flex items-center gap-2 text-sm">
               <span className={`w-2.5 h-2.5 rounded-full ${ESTADOS[key].dot}`} />
               <span className="text-slate-500 dark:text-slate-400">{ESTADOS[key].label}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-100 tabular-nums">
+              <span className="font-mono font-semibold text-slate-800 dark:text-slate-100">
                 {counts[key]}
               </span>
             </span>
@@ -137,12 +147,12 @@ export default function Carrera() {
               aria-pressed={activa}
               className={`px-3.5 py-1.5 text-sm font-semibold rounded-full border transition cursor-pointer ${
                 activa
-                  ? 'bg-violet-600 border-violet-600 text-white shadow-sm'
+                  ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
                   : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:text-white'
               }`}
             >
               {v.label}
-              <span className={`ml-1.5 tabular-nums ${activa ? 'text-violet-200' : 'text-slate-400'}`}>
+              <span className={`ml-1.5 tabular-nums ${activa ? 'text-brand-200' : 'text-slate-400'}`}>
                 {conteoPorVista[v.key]}
               </span>
             </button>
@@ -165,34 +175,32 @@ export default function Carrera() {
                 </span>
                 <span className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                 {/* Atajo para cargar tu historial rápido cuando arrancás */}
-                <select
+                <Select
                   value=""
                   disabled={guardando}
-                  aria-label={`Marcar todas las materias de ${yearLabel(year)}`}
-                  onChange={(e) => {
-                    if (e.target.value) {
+                  variant="chip"
+                  chipClass="bg-transparent border-slate-200 text-slate-500 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600"
+                  placeholder="Marcar año…"
+                  menuAlign="right"
+                  ariaLabel={`Marcar todas las materias de ${yearLabel(year)}`}
+                  options={ESTADO_OPTIONS}
+                  onChange={(estado) => {
+                    if (estado) {
                       cambiarEstado(
                         data.subjects.filter((m) => m.year === year).map((m) => m.code),
-                        e.target.value
+                        estado
                       );
                     }
                   }}
-                  className="text-xs text-slate-500 dark:text-slate-400 bg-transparent border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 transition"
-                >
-                  <option value="">Marcar todo el año…</option>
-                  {ESTADO_KEYS.map((k) => (
-                    <option key={k} value={k}>
-                      {ESTADOS[k].label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               <ul className="space-y-2">
-                {materias.map((m) => (
+                {materias.map((m, i) => (
                   <MateriaRow
                     key={m.code}
                     materia={m}
+                    index={i}
                     abierta={abierta === m.code}
                     onToggle={() => setAbierta(abierta === m.code ? null : m.code)}
                     onEstado={(estado) => cambiarEstado([m.code], estado)}
@@ -212,39 +220,59 @@ export default function Carrera() {
 // Una fila del listado. Componente aparte (y afuera del padre) para
 // que cada fila maneje su propio despliegue sin re-renderizar todo.
 // ─────────────────────────────────────────────────────────────
-function MateriaRow({ materia, abierta, onToggle, onEstado, disabled }) {
+function MateriaRow({ materia, index = 0, abierta, onToggle, onEstado, disabled }) {
   const est = ESTADOS[materia.status];
   const bloqueada = !materia.enabled && materia.status === 'pendiente';
+  // "Lista para cursar": habilitada por correlativas y todavía pendiente.
+  // Es el estado protagonista (como un target de build "ready").
+  const lista = materia.enabled && materia.status === 'pendiente';
   const hayDetalle =
     materia.requires.regular.length > 0 || materia.requires.aprobada.length > 0 || materia.note;
 
   return (
-    <li className="bg-white rounded-xl border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
+    <li
+      style={{ '--d': `${index * 40}ms` }}
+      className={`reveal card overflow-hidden transition duration-200 hover:border-brand-300 dark:hover:border-brand-500/40 ${
+        lista ? 'border-l-2 border-l-mint-400 dark:border-l-mint-500' : ''
+      }`}
+    >
       <div className="flex items-center gap-3 p-3">
-        {/* Nombre + señal de bloqueo/habilitación */}
+        {/* Código + nombre + señal de bloqueo/habilitación */}
         <button
           type="button"
           onClick={onToggle}
           disabled={!hayDetalle}
           aria-expanded={abierta}
-          className="flex-1 min-w-0 flex items-center gap-2.5 text-left disabled:cursor-default cursor-pointer group"
+          className="flex-1 min-w-0 flex items-center gap-3 text-left disabled:cursor-default cursor-pointer group"
         >
           {bloqueada ? (
             <IconLock className="w-4 h-4 shrink-0 text-slate-400" />
           ) : materia.status === 'aprobada' ? (
-            <IconCheck className="w-4 h-4 shrink-0 text-emerald-500" />
+            <IconCheck className="w-4 h-4 shrink-0 text-mint-500" />
           ) : (
-            <span className={`w-2.5 h-2.5 shrink-0 rounded-full ml-0.5 mr-1 ${est.dot}`} />
+            <span className={`w-2.5 h-2.5 shrink-0 rounded-full ml-0.5 ${est.dot}`} />
           )}
 
-          <span
-            className={`text-sm font-medium truncate ${
-              bloqueada
-                ? 'text-slate-400 dark:text-slate-500'
-                : 'text-slate-800 dark:text-slate-100 group-hover:text-violet-600 dark:group-hover:text-violet-400'
-            }`}
-          >
-            {materia.name}
+          <span className="min-w-0 flex flex-col">
+            <span className="flex items-center gap-2 leading-none mb-0.5">
+              <span className="font-mono text-[10px] text-slate-400 dark:text-slate-600">
+                {materia.code}
+              </span>
+              {lista && (
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-mint-600 dark:text-mint-400">
+                  lista
+                </span>
+              )}
+            </span>
+            <span
+              className={`text-sm font-medium truncate ${
+                bloqueada
+                  ? 'text-slate-400 dark:text-slate-500'
+                  : 'text-slate-800 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-400'
+              }`}
+            >
+              {materia.name}
+            </span>
           </span>
 
           {hayDetalle && (
@@ -256,21 +284,19 @@ function MateriaRow({ materia, abierta, onToggle, onEstado, disabled }) {
           )}
         </button>
 
-        {/* Selector de estado. El color del chip refleja el estado
+        {/* Selector de estado. El color de la píldora refleja el estado
             actual, así se puede escanear la lista de un vistazo. */}
-        <select
+        <Select
           value={materia.status}
           disabled={disabled}
-          onChange={(e) => onEstado(e.target.value)}
-          aria-label={`Estado de ${materia.name}`}
-          className={`shrink-0 text-xs font-semibold rounded-lg border px-2 py-1.5 cursor-pointer transition outline-none focus:ring-4 focus:ring-violet-500/20 ${est.chip}`}
-        >
-          {ESTADO_KEYS.map((k) => (
-            <option key={k} value={k}>
-              {ESTADOS[k].label}
-            </option>
-          ))}
-        </select>
+          variant="chip"
+          chipClass={est.chip}
+          menuAlign="right"
+          ariaLabel={`Estado de ${materia.name}`}
+          options={ESTADO_OPTIONS}
+          onChange={onEstado}
+          className="shrink-0"
+        />
       </div>
 
       {/* ── Detalle desplegable ── */}

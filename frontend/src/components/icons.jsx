@@ -161,3 +161,60 @@ export function IconClipboard({ className = 'w-5 h-5' }) {
     </svg>
   );
 }
+
+// Prompt de terminal (chevron + guion): la marca "dev tool" de silvIA.
+export function IconTerminal({ className = 'w-5 h-5' }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="m5 8 4 4-4 4" />
+      <path d="M12 16h6" />
+    </svg>
+  );
+}
+
+export function IconArrowRight({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+// Capas / nodos apilados — para el grafo de correlativas ("dependencias").
+export function IconLayers({ className = 'w-5 h-5' }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="m12 2 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 12 9 5 9-5" />
+      <path d="m3 17 9 5 9-5" />
+    </svg>
+  );
+}
+
+// Rayo — señal de urgencia (tareas que vencen).
+export function IconZap({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />
+    </svg>
+  );
+}
+
+export function IconCalendar({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+
+// Triángulo de alerta — para los diálogos de confirmación.
+export function IconAlertTriangle({ className = 'w-5 h-5' }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9v4M12 17h.01" />
+    </svg>
+  );
+}

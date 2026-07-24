@@ -12,7 +12,11 @@ import { getTasks, createTask, updateTask, toggleTask, deleteTask } from '../api
 import { getSubjects } from '../api/subjects';
 import { SUBJECT_COLORS } from '../constants/colors';
 import Spinner from '../components/Spinner';
-import { IconPencil, IconTrash, IconPlus, IconBell, IconClipboard } from '../components/icons';
+import DatePicker from '../components/DatePicker';
+import Select from '../components/Select';
+import Checkbox from '../components/Checkbox';
+import { useConfirm } from '../context/ConfirmContext';
+import { IconPencil, IconTrash, IconPlus, IconZap, IconClipboard } from '../components/icons';
 
 // Formatea 'YYYY-MM-DD' a 'DD/MM'
 function formatDate(iso) {
@@ -59,11 +63,19 @@ const PRIORITIES = {
 };
 const PRIORITY_KEYS = Object.keys(PRIORITIES); // ['alta','media','baja']
 
+// Opciones para el <Select> de prioridad (con su puntito de color).
+const PRIORITY_OPTIONS = PRIORITY_KEYS.map((key) => ({
+  value: key,
+  label: PRIORITIES[key].label,
+  dot: PRIORITIES[key].dot,
+}));
+
 // Estilo compartido de inputs/selects (para no repetir el string enorme)
 const FIELD =
-  'px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-4 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition dark:bg-slate-900 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-500';
+  'px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition dark:bg-slate-900 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-500';
 
 export default function Tasks() {
+  const confirmar = useConfirm();
   const [tasks, setTasks] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -160,7 +172,12 @@ export default function Tasks() {
   }
 
   async function handleDelete(id, taskTitle) {
-    const ok = window.confirm(`¿Eliminar la tarea "${taskTitle}"?`);
+    const ok = await confirmar({
+      tone: 'danger',
+      title: 'Eliminar tarea',
+      message: `Se va a eliminar "${taskTitle}". Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+    });
     if (!ok) return;
 
     const backup = tasks;
@@ -187,23 +204,40 @@ export default function Tasks() {
     (t) => !t.done && t.dueDate && daysUntil(t.dueDate) <= 0
   ).length;
 
+  // Opciones del <Select> de materia: "Sin materia" + cada materia con su
+  // puntito de color. Los ids van como string para comparar con el value.
+  const subjectOptions = [
+    { value: '', label: 'Sin materia' },
+    ...subjects.map((s) => ({
+      value: String(s.id),
+      label: s.name,
+      dot: (SUBJECT_COLORS[s.color] || SUBJECT_COLORS.indigo).dot,
+    })),
+  ];
+
   return (
     <div>
-      <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">
+      <p className="eyebrow mb-2">// tareas</p>
+      <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
         Mis tareas
       </h2>
-      <p className="text-slate-500 dark:text-slate-400 mb-6">
-        {pendingCount === 0
-          ? '¡No tenés tareas pendientes! 🎉'
-          : `Tenés ${pendingCount} tarea${pendingCount === 1 ? '' : 's'} pendiente${
-              pendingCount === 1 ? '' : 's'
-            }.`}
+      <p className="mt-1.5 mb-6 font-mono text-sm text-slate-500 dark:text-slate-400">
+        {pendingCount === 0 ? (
+          <>
+            <span className="text-mint-600 dark:text-mint-400">✓</span> sin pendientes — todo al día
+          </>
+        ) : (
+          <>
+            <span className="text-brand-600 dark:text-brand-400 font-semibold">{pendingCount}</span>{' '}
+            pendiente{pendingCount === 1 ? '' : 's'} en cola
+          </>
+        )}
       </p>
 
       {/* Aviso de urgentes: solo aparece si hay algo que vence hoy o vencido */}
       {urgentCount > 0 && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">
-          <IconBell className="w-5 h-5 shrink-0" />
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300 pop-in">
+          <IconZap className="w-5 h-5 shrink-0" />
           <span>
             Tenés <strong className="font-semibold">{urgentCount}</strong> tarea
             {urgentCount === 1 ? '' : 's'} que vence{urgentCount === 1 ? '' : 'n'} hoy o ya está
@@ -215,10 +249,10 @@ export default function Tasks() {
       {/* Formulario para agregar tarea */}
       <form
         onSubmit={handleAdd}
-        className="bg-white rounded-2xl border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700 p-4 mb-6 flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap gap-3 sm:items-end"
+        className="card p-4 mb-6 flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap gap-3 sm:items-end"
       >
         <div className="flex-1 sm:min-w-[220px]">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          <label className="block font-mono text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
             Tarea
           </label>
           <input
@@ -231,43 +265,42 @@ export default function Tasks() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          <label className="block font-mono text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
             Entrega
           </label>
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={FIELD} />
+          <DatePicker value={dueDate} onChange={setDueDate} className="w-full sm:w-48" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          <label className="block font-mono text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
             Materia
           </label>
-          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className={`${FIELD} bg-white`}>
-            <option value="">Sin materia</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            value={subjectId}
+            onChange={setSubjectId}
+            options={subjectOptions}
+            ariaLabel="Materia de la tarea"
+            className="w-full sm:w-52"
+          />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          <label className="block font-mono text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
             Prioridad
           </label>
-          <select value={priority} onChange={(e) => setPriority(e.target.value)} className={`${FIELD} bg-white`}>
-            {PRIORITY_KEYS.map((key) => (
-              <option key={key} value={key}>
-                {PRIORITIES[key].label}
-              </option>
-            ))}
-          </select>
+          <Select
+            value={priority}
+            onChange={setPriority}
+            options={PRIORITY_OPTIONS}
+            ariaLabel="Prioridad de la tarea"
+            className="w-full sm:w-36"
+          />
         </div>
 
         <button
           type="submit"
           disabled={saving}
-          className="inline-flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-700 active:scale-[.98] text-white font-semibold px-5 py-2.5 rounded-xl shadow-sm transition disabled:opacity-60 cursor-pointer"
+          className="inline-flex items-center justify-center gap-1.5 bg-brand-600 hover:bg-brand-700 active:scale-[.98] text-white font-semibold px-5 py-2.5 rounded-xl shadow-sm transition disabled:opacity-60 cursor-pointer"
         >
           <IconPlus className="w-4 h-4" />
           {saving ? 'Agregando...' : 'Agregar'}
@@ -286,7 +319,7 @@ export default function Tasks() {
             onClick={() => setFilter(f.key)}
             className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition cursor-pointer ${
               filter === f.key
-                ? 'bg-violet-600 text-white shadow-sm'
+                ? 'bg-brand-600 text-white shadow-sm'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700'
             }`}
           >
@@ -300,14 +333,14 @@ export default function Tasks() {
         <Spinner label="Cargando tareas..." />
       ) : visibleTasks.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 dark:bg-slate-800 dark:border-slate-700">
-          <div className="mx-auto w-12 h-12 grid place-items-center rounded-full bg-violet-50 text-violet-500 dark:bg-violet-500/10 mb-3">
+          <div className="mx-auto w-12 h-12 grid place-items-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/10 mb-3">
             <IconClipboard className="w-6 h-6" />
           </div>
           <p className="text-slate-500 dark:text-slate-400">No hay tareas para mostrar acá.</p>
         </div>
       ) : (
         <ul className="space-y-2.5">
-          {visibleTasks.map((task) => {
+          {visibleTasks.map((task, i) => {
             const c = task.subjectColor
               ? SUBJECT_COLORS[task.subjectColor] || SUBJECT_COLORS.indigo
               : null;
@@ -319,7 +352,7 @@ export default function Tasks() {
               return (
                 <li
                   key={task.id}
-                  className="bg-white rounded-2xl border border-violet-300 shadow-sm dark:bg-slate-800 dark:border-violet-500/40 p-4 flex flex-col sm:flex-row gap-3 sm:items-end"
+                  className="bg-white rounded-2xl border border-brand-300 shadow-sm dark:bg-slate-800 dark:border-brand-500/40 p-4 flex flex-col sm:flex-row gap-3 sm:items-end"
                 >
                   <div className="flex-1">
                     <input
@@ -334,35 +367,25 @@ export default function Tasks() {
                       className={`w-full ${FIELD}`}
                     />
                   </div>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={editDueDate}
-                    onChange={(e) => setEditDueDate(e.target.value)}
-                    className={FIELD}
+                    onChange={setEditDueDate}
+                    className="w-full sm:w-44"
                   />
-                  <select
+                  <Select
                     value={editSubjectId}
-                    onChange={(e) => setEditSubjectId(e.target.value)}
-                    className={`${FIELD} bg-white`}
-                  >
-                    <option value="">Sin materia</option>
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
+                    onChange={setEditSubjectId}
+                    options={subjectOptions}
+                    ariaLabel="Materia de la tarea"
+                    className="w-full sm:w-44"
+                  />
+                  <Select
                     value={editPriority}
-                    onChange={(e) => setEditPriority(e.target.value)}
-                    className={`${FIELD} bg-white`}
-                  >
-                    {PRIORITY_KEYS.map((key) => (
-                      <option key={key} value={key}>
-                        {PRIORITIES[key].label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setEditPriority}
+                    options={PRIORITY_OPTIONS}
+                    ariaLabel="Prioridad de la tarea"
+                    className="w-full sm:w-32"
+                  />
                   <div className="flex gap-2 justify-end">
                     <button
                       onClick={cancelEdit}
@@ -372,7 +395,7 @@ export default function Tasks() {
                     </button>
                     <button
                       onClick={() => handleUpdate(task.id)}
-                      className="px-4 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold transition cursor-pointer"
+                      className="px-4 py-2 text-sm rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold transition cursor-pointer"
                     >
                       Guardar
                     </button>
@@ -385,14 +408,18 @@ export default function Tasks() {
             return (
               <li
                 key={task.id}
-                className="group bg-white rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 p-4 flex items-center gap-3 transition hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm"
+                style={{ '--d': `${i * 40}ms` }}
+                className="group card reveal p-4 flex items-center gap-3 transition duration-200 hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-lg hover:shadow-brand-500/10"
               >
                 {/* Checkbox para marcar hecha */}
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={!!task.done}
                   onChange={() => handleToggle(task.id)}
-                  className="w-5 h-5 rounded accent-violet-600 cursor-pointer shrink-0"
+                  ariaLabel={
+                    task.done
+                      ? `Marcar "${task.title}" como pendiente`
+                      : `Marcar "${task.title}" como hecha`
+                  }
                 />
 
                 {/* Título (tachado si está hecha) */}
@@ -434,7 +461,7 @@ export default function Tasks() {
                 <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition">
                   <button
                     onClick={() => startEdit(task)}
-                    className="grid place-items-center w-8 h-8 rounded-lg text-slate-400 hover:text-violet-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+                    className="grid place-items-center w-8 h-8 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
                     title="Editar"
                     aria-label={`Editar ${task.title}`}
                   >

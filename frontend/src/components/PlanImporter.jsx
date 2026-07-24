@@ -15,6 +15,7 @@ import { getPlan, importSubjects } from '../api/subjects';
 import { yearLabel, YEAR_BADGE } from '../constants/years';
 import { IconX, IconCheck, IconDownload } from './icons';
 import Spinner from './Spinner';
+import Checkbox from './Checkbox';
 
 export default function PlanImporter({ existingNames, onClose, onImported }) {
   const [plan, setPlan] = useState(null);
@@ -81,7 +82,7 @@ export default function PlanImporter({ existingNames, onClose, onImported }) {
   return (
     // Fondo oscuro: al clickearlo se cierra el modal
     <div
-      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4"
+      className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -91,7 +92,7 @@ export default function PlanImporter({ existingNames, onClose, onImported }) {
           "burbujee" hasta el fondo y cierre el modal sin querer */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700"
+        className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 pop-in"
       >
         {/* ── Encabezado ── */}
         <div className="flex items-start justify-between gap-4 p-5 border-b border-slate-200 dark:border-slate-700">
@@ -138,7 +139,7 @@ export default function PlanImporter({ existingNames, onClose, onImported }) {
                       type="button"
                       onClick={() => toggleAnio(subjects)}
                       disabled={disponibles.length === 0}
-                      className="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-default cursor-pointer"
+                      className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-default cursor-pointer"
                     >
                       {disponibles.length === 0
                         ? 'Ya las tenés todas'
@@ -160,16 +161,15 @@ export default function PlanImporter({ existingNames, onClose, onImported }) {
                               tiene
                                 ? 'border-transparent opacity-55 cursor-default'
                                 : tildada
-                                  ? 'border-violet-300 bg-violet-50 dark:border-violet-500/40 dark:bg-violet-500/10 cursor-pointer'
+                                  ? 'border-brand-300 bg-brand-50 dark:border-brand-500/40 dark:bg-brand-500/10 cursor-pointer'
                                   : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer'
                             }`}
                           >
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={tildada}
                               disabled={tiene}
                               onChange={() => toggle(materia.code)}
-                              className="w-4 h-4 shrink-0 accent-violet-600 cursor-pointer disabled:cursor-default"
+                              ariaLabel={materia.name}
                             />
                             <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">
                               {materia.name}
@@ -208,7 +208,7 @@ export default function PlanImporter({ existingNames, onClose, onImported }) {
             <button
               onClick={handleImport}
               disabled={seleccion.size === 0 || importando}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-violet-600 hover:bg-violet-700 active:scale-[.98] text-white shadow-sm transition disabled:opacity-50 disabled:cursor-default cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[.98] text-white shadow-sm transition disabled:opacity-50 disabled:cursor-default cursor-pointer"
             >
               <IconDownload className="w-4 h-4" />
               {importando ? 'Importando...' : 'Importar'}

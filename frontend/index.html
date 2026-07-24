@@ -6,8 +6,14 @@
     <!-- viewport-fit=cover: sin esto, env(safe-area-inset-*) siempre da 0 y
          la barra de tabs quedaría tapada por la barra de gestos del iPhone. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="silvIA — organizá y gestioná tu estudio: materias, tareas y progreso." />
-    <title>silvIA · Organizá tu estudio</title>
+    <meta name="description" content="silvIA — el sistema operativo de tu carrera: materias, tareas, correlativas y progreso." />
+    <!-- Color de la barra del navegador acorde al tema (midnight en oscuro). -->
+    <meta name="theme-color" content="#f5f6fb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0e17" media="(prefers-color-scheme: dark)" />
+    <!-- Precableado a Google Fonts para que las webfonts carguen sin demora. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <title>silvIA · el sistema de tu carrera</title>
     <!-- Aplica el tema ANTES de pintar, para que no haya un parpadeo blanco.
          Regla: si el usuario ya eligió, respetamos su elección (localStorage);
          si nunca eligió, seguimos la preferencia del sistema operativo. -->

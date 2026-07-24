@@ -8,7 +8,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { IconBook } from '../components/icons';
+import AuthShell from '../components/AuthShell';
+import { IconArrowRight } from '../components/icons';
 
 export default function Register() {
   const { register } = useAuth();
@@ -34,86 +35,78 @@ export default function Register() {
     }
   }
 
+  const label = 'block font-mono text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5';
   const field =
-    'w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-4 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition';
+    'w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-600';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-violet-950 to-slate-900 px-4">
-      <div className="w-full max-w-md">
-        {/* Marca arriba de la tarjeta */}
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <span className="grid place-items-center w-10 h-10 rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-600/30">
-            <IconBook className="w-6 h-6" />
-          </span>
-          <span className="text-2xl font-extrabold tracking-tight text-white">
-            silv<span className="text-violet-400">IA</span>
-          </span>
+    <AuthShell
+      title="Creá tu cuenta"
+      subtitle="Empezá a organizar tu carrera con silvIA."
+      footer={
+        <>
+          ¿Ya tenés cuenta?{' '}
+          <Link to="/login" className="font-semibold text-brand-600 dark:text-brand-400 hover:underline">
+            Iniciá sesión
+          </Link>
+        </>
+      }
+    >
+      {error && (
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">
+          <span className="font-mono mt-px">!</span>
+          <span>{error}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className={label}>Nombre</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className={field}
+            placeholder="Tu nombre"
+          />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 text-center">Creá tu cuenta</h1>
-          <p className="text-slate-500 text-center mt-1 mb-6">Empezá a organizar tu estudio con silvIA</p>
+        <div>
+          <label className={label}>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className={field}
+            placeholder="tu@email.com"
+          />
+        </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-3 mb-4">
-              {error}
-            </div>
+        <div>
+          <label className={label}>Contraseña</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className={field}
+            placeholder="••••••••"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="group w-full inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 active:scale-[.99] text-white font-semibold py-2.5 rounded-xl shadow-lg shadow-brand-600/25 transition disabled:opacity-60 cursor-pointer"
+        >
+          {loading ? 'Creando cuenta…' : 'Crear cuenta'}
+          {!loading && (
+            <IconArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
           )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Nombre</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className={field}
-                placeholder="Tu nombre"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className={field}
-                placeholder="tu@email.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Contraseña</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className={field}
-                placeholder="••••••••"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-violet-600 hover:bg-violet-700 active:scale-[.99] text-white font-semibold py-2.5 rounded-xl shadow-sm shadow-violet-600/20 transition disabled:opacity-60 cursor-pointer"
-            >
-              {loading ? 'Creando cuenta...' : 'Registrarme'}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-slate-500 mt-6">
-            ¿Ya tenés cuenta?{' '}
-            <Link to="/login" className="text-violet-600 font-semibold hover:underline">
-              Iniciá sesión
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+        </button>
+      </form>
+    </AuthShell>
   );
 }
