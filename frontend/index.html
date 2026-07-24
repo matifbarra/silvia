@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: sin esto, env(safe-area-inset-*) siempre da 0 y
+         la barra de tabs quedaría tapada por la barra de gestos del iPhone. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="silvIA — organizá y gestioná tu estudio: materias, tareas y progreso." />
     <title>silvIA · Organizá tu estudio</title>
     <!-- Aplica el tema ANTES de pintar, para que no haya un parpadeo blanco.
