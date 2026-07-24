@@ -408,7 +408,7 @@ export default function Tasks() {
             return (
               <li
                 key={task.id}
-                style={{ '--d': `${i * 40}ms` }}
+                style={{ '--d': `${Math.min(i, 10) * 35}ms` }}
                 className="group card reveal p-4 flex items-center gap-3 transition duration-200 hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-lg hover:shadow-brand-500/10"
               >
                 {/* Checkbox para marcar hecha */}

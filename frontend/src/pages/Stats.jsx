@@ -146,7 +146,7 @@ export default function Stats() {
                       style={{
                         width: mounted ? `${widthPct}%` : '0%',
                         transition: 'width 0.8s cubic-bezier(0.2,0.7,0.2,1)',
-                        transitionDelay: `${400 + i * 60}ms`,
+                        transitionDelay: `${300 + Math.min(i, 8) * 50}ms`,
                       }}
                     />
                   </div>

@@ -231,7 +231,7 @@ function MateriaRow({ materia, index = 0, abierta, onToggle, onEstado, disabled 
 
   return (
     <li
-      style={{ '--d': `${index * 40}ms` }}
+      style={{ '--d': `${Math.min(index, 10) * 35}ms` }}
       className={`reveal card overflow-hidden transition duration-200 hover:border-brand-300 dark:hover:border-brand-500/40 ${
         lista ? 'border-l-2 border-l-mint-400 dark:border-l-mint-500' : ''
       }`}

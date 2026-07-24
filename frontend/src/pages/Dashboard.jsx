@@ -384,7 +384,7 @@ export default function Dashboard() {
                   return (
                     <div
                       key={subject.id}
-                      style={{ '--d': `${i * 45}ms` }}
+                      style={{ '--d': `${Math.min(i, 10) * 40}ms` }}
                       className={`group reveal rounded-2xl border p-5 flex items-center justify-between transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand-500/10 ${c.card}`}
                     >
                       <div className="flex items-center gap-3 min-w-0">

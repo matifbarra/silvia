@@ -55,12 +55,23 @@ export default function Popover({
     }
 
     ubicar();
+    // Throttle con rAF: al scrollear/redimensionar no recalculamos en cada
+    // evento (que forzaría layout), sino una vez por frame como mucho.
+    let pendiente = false;
+    const alMoverse = () => {
+      if (pendiente) return;
+      pendiente = true;
+      requestAnimationFrame(() => {
+        ubicar();
+        pendiente = false;
+      });
+    };
     // capture:true para enterarnos también del scroll de contenedores internos.
-    window.addEventListener('scroll', ubicar, true);
-    window.addEventListener('resize', ubicar);
+    window.addEventListener('scroll', alMoverse, true);
+    window.addEventListener('resize', alMoverse);
     return () => {
-      window.removeEventListener('scroll', ubicar, true);
-      window.removeEventListener('resize', ubicar);
+      window.removeEventListener('scroll', alMoverse, true);
+      window.removeEventListener('resize', alMoverse);
     };
   }, [open, align, minWidth, gap, anchorRef]);
 

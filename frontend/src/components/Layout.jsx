@@ -30,7 +30,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen">
       {/* Header sticky con blur: la "barra de herramientas" de la app. */}
-      <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/70 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/60">
+      <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/85 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/80">
         <div className="max-w-5xl mx-auto px-4 h-16 flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
           <div className="flex items-center gap-2 sm:gap-6">
             {/* Logo: prompt de terminal en un cuadrado de marca + wordmark */}

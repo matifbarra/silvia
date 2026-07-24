@@ -28,7 +28,7 @@ export default function BottomNav() {
       // pb-[env(safe-area-inset-bottom)]: en iPhone sin botón de inicio hay
       // una barra de gestos abajo. Ese padding evita que los tabs queden
       // tapados. Requiere viewport-fit=cover en el HTML.
-      className="sm:hidden fixed bottom-0 inset-x-0 z-30 border-t border-slate-200/80 bg-white/80 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/80 pb-[env(safe-area-inset-bottom)]"
+      className="sm:hidden fixed bottom-0 inset-x-0 z-30 border-t border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/90 pb-[env(safe-area-inset-bottom)]"
     >
       <ul className="grid grid-cols-4">
         {TABS.map(({ to, label, Icon, end }) => (
