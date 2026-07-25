@@ -2,12 +2,20 @@
 // PLAN DE ESTUDIO — Ingeniería en Sistemas de Información
 // UTN · Plan 2023
 //
-// Esto son DATOS DE REFERENCIA: no se guardan en la base ni cambian
-// por usuario. Es el catálogo del que cada uno elige qué importar.
+// ⚠️ ESTO ES LA SEMILLA, NO LA FUENTE DE VERDAD.
 //
-// Lo ponemos en el backend (y no en el frontend) para que sea una
-// única fuente de verdad: el servidor valida contra esta misma lista
-// cuando el usuario pide importar materias.
+// El plan vive en la base, en las tablas plan_subjects y
+// plan_correlativas (ver db/database.js). Este archivo se usa UNA sola
+// vez: cuando la base está vacía, para cargarla. Después nadie más lo
+// lee, y la app trabaja siempre contra la base (models/Plan.js).
+//
+// Por qué: si querés corregir una correlativa mal cargada, la editás en
+// la base y listo. Con el plan en código había que editar, commitear y
+// esperar un redeploy. Y como el seed solo corre con la tabla vacía,
+// tus correcciones no se pisan en el próximo deploy.
+//
+// O sea: tocar este archivo NO cambia nada en una base que ya tiene el
+// plan cargado. Sirve para instalaciones nuevas.
 //
 //   code     → el número de la materia en el plan (sirve como identificador)
 //   year     → el nivel / año en el que se cursa (1 a 5)
@@ -75,13 +83,13 @@ const NOTAS_ESPECIALES = {
   36: 'Además, tenés que tener aprobadas TODAS las materias del plan y la Práctica Profesional Supervisada.',
 };
 
-// Años válidos, calculados desde el plan (así no quedan "hardcodeados"
-// en dos lugares: si mañana el plan cambia, esto se actualiza solo).
-const YEARS = [...new Set(PLAN_SISTEMAS.map((m) => m.year))].sort();
-
-// Color por defecto según el año, para que al importar cada nivel
-// quede visualmente diferenciado. Son las claves de SUBJECT_COLORS
-// del frontend (ahí se traducen a clases de Tailwind).
+// Color por defecto según el año, para que al importar cada nivel quede
+// visualmente diferenciado. Son las claves de SUBJECT_COLORS del
+// frontend (ahí se traducen a clases de Tailwind).
+//
+// Esto NO se migró a la base a propósito: el color es una decisión de
+// presentación, no un dato del plan de estudio. La UTN no dice de qué
+// color es 2do año.
 const COLOR_POR_ANIO = {
   1: 'blue',
   2: 'green',
@@ -90,14 +98,10 @@ const COLOR_POR_ANIO = {
   5: 'purple',
 };
 
-// Búsqueda rápida por code: en vez de recorrer el array cada vez
-// (O(n)), armamos un Map una sola vez al cargar el módulo (O(1)).
-const PLAN_POR_CODE = new Map(PLAN_SISTEMAS.map((m) => [m.code, m]));
-
+// YEARS y PLAN_POR_CODE ya no viven acá: ahora los resuelve
+// models/Plan.js consultando la base (findYears / findCodes).
 module.exports = {
   PLAN_SISTEMAS,
-  PLAN_POR_CODE,
-  YEARS,
   COLOR_POR_ANIO,
   NOTAS_ESPECIALES,
 };

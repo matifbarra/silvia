@@ -9,12 +9,7 @@
 // ─────────────────────────────────────────────────────────────
 
 const PlanStatus = require('../models/PlanStatus');
-const {
-  PLAN_SISTEMAS,
-  PLAN_POR_CODE,
-  YEARS,
-  NOTAS_ESPECIALES,
-} = require('../data/planSistemas');
+const Plan = require('../models/Plan');
 
 // Los cuatro estados posibles, en orden de avance.
 const ESTADOS = ['pendiente', 'cursando', 'regular', 'aprobada'];
@@ -24,20 +19,26 @@ const POR_DEFECTO = 'pendiente';
 // aprobar es más que regularizar.
 const CUENTA_COMO_REGULAR = new Set(['regular', 'aprobada']);
 
-// Convierte [1, 2] en [{ code: 1, name: 'Análisis Matemático I' }, ...]
-// para que el frontend pueda mostrar nombres y no números sueltos.
-function conNombres(codes) {
-  return codes.map((code) => ({ code, name: PLAN_POR_CODE.get(code)?.name ?? `Materia ${code}` }));
-}
-
 // GET /api/carrera
 // Devuelve el plan completo con TU estado en cada materia y, para cada
 // una, si la tenés habilitada y qué te falta si no.
 async function getCarrera(req, res) {
-  const estados = await PlanStatus.findMapByUser(req.userId);
+  // Las dos consultas no dependen una de la otra, así que van en
+  // paralelo: tardamos lo que tarde la más lenta, no la suma.
+  const [plan, estados] = await Promise.all([
+    Plan.findAll(),
+    PlanStatus.findMapByUser(req.userId),
+  ]);
+
   const estadoDe = (code) => estados.get(code) || POR_DEFECTO;
 
-  const materias = PLAN_SISTEMAS.map((materia) => {
+  // Convierte [1, 2] en [{ code: 1, name: 'Análisis Matemático I' }, ...]
+  // para que el frontend muestre nombres y no números sueltos.
+  const nombrePorCode = new Map(plan.map((m) => [m.code, m.name]));
+  const conNombres = (codes) =>
+    codes.map((code) => ({ code, name: nombrePorCode.get(code) ?? `Materia ${code}` }));
+
+  const materias = plan.map((materia) => {
     // Correlativas que NO cumplís todavía
     const faltaRegular = materia.regular.filter((c) => !CUENTA_COMO_REGULAR.has(estadoDe(c)));
     const faltaAprobada = materia.aprobada.filter((c) => estadoDe(c) !== 'aprobada');
@@ -51,7 +52,7 @@ async function getCarrera(req, res) {
       enabled: faltaRegular.length === 0 && faltaAprobada.length === 0,
       requires: { regular: conNombres(materia.regular), aprobada: conNombres(materia.aprobada) },
       missing: { regular: conNombres(faltaRegular), aprobada: conNombres(faltaAprobada) },
-      note: NOTAS_ESPECIALES[materia.code] || null,
+      note: materia.note || null,
     };
   });
 
@@ -69,7 +70,10 @@ async function getCarrera(req, res) {
   res.json({
     career: 'Ingeniería en Sistemas de Información',
     plan: '2023',
-    years: YEARS,
+    // Los años salen del propio plan. El (a, b) => a - b no sobra:
+    // sort() sin comparador ordena como TEXTO, así que con dos dígitos
+    // pondría el 10 antes que el 2.
+    years: [...new Set(plan.map((m) => m.year))].sort((a, b) => a - b),
     total: materias.length,
     counts: conteo,
     subjects: materias,
@@ -90,7 +94,8 @@ async function setStatus(req, res) {
   }
 
   // Nos quedamos solo con los codes que existen en el plan
-  const validos = [...new Set(codes.map(Number))].filter((c) => PLAN_POR_CODE.has(c));
+  const delPlan = await Plan.findCodes();
+  const validos = [...new Set(codes.map(Number))].filter((c) => delPlan.has(c));
   if (validos.length === 0) {
     return res.status(400).json({ message: 'Ninguna de las materias enviadas existe en el plan' });
   }

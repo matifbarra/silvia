@@ -5,14 +5,19 @@
 // ─────────────────────────────────────────────────────────────
 
 const Subject = require('../models/Subject');
-const { PLAN_SISTEMAS, PLAN_POR_CODE, YEARS, COLOR_POR_ANIO } = require('../data/planSistemas');
+const Plan = require('../models/Plan');
+const { COLOR_POR_ANIO } = require('../data/planSistemas');
 
 // Devuelve un año válido (1..5) o null si no lo es.
 // Nunca confiamos en lo que manda el cliente: alguien podría mandar
 // year: 99 o year: "hola" desde Postman.
-function normalizarAnio(valor) {
+//
+// Los años válidos ahora vienen de la base, así que se los pasamos como
+// parámetro en vez de leerlos de una constante. Sigue siendo una función
+// pura: mismas entradas, misma salida, y se puede testear sin base.
+function normalizarAnio(valor, years) {
   const n = Number(valor);
-  return YEARS.includes(n) ? n : null;
+  return years.includes(n) ? n : null;
 }
 
 // GET /api/subjects → lista todas las materias del usuario
@@ -25,10 +30,16 @@ async function getAll(req, res) {
 // No depende del usuario: es siempre el mismo. Lo mandamos ya agrupado
 // por año para que el frontend no tenga que hacer ese trabajo.
 async function getPlan(req, res) {
-  const porAnio = YEARS.map((year) => ({
+  const plan = await Plan.findAll();
+  const years = [...new Set(plan.map((m) => m.year))].sort((a, b) => a - b);
+
+  const porAnio = years.map((year) => ({
     year,
-    color: COLOR_POR_ANIO[year],
-    subjects: PLAN_SISTEMAS.filter((m) => m.year === year),
+    // El color es una decisión de presentación, no parte del plan, así
+    // que sigue en código. El fallback cubre el caso de que en la base
+    // aparezca un año que este mapa no tiene previsto.
+    color: COLOR_POR_ANIO[year] || 'indigo',
+    subjects: plan.filter((m) => m.year === year),
   }));
 
   res.json({ career: 'Ingeniería en Sistemas de Información', plan: '2023', years: porAnio });
@@ -45,8 +56,11 @@ async function importFromPlan(req, res) {
 
   // 1) Nos quedamos solo con los codes que EXISTEN en el plan.
   //    new Set(codes) elimina repetidos si el cliente mandó alguno dos veces.
+  const plan = await Plan.findAll();
+  const porCode = new Map(plan.map((m) => [m.code, m]));
+
   const delPlan = [...new Set(codes)]
-    .map((code) => PLAN_POR_CODE.get(Number(code)))
+    .map((code) => porCode.get(Number(code)))
     .filter(Boolean);
 
   if (delPlan.length === 0) {
@@ -65,7 +79,7 @@ async function importFromPlan(req, res) {
   // 3) Un solo INSERT con todas. El color sale del año.
   const created = await Subject.createMany(
     req.userId,
-    nuevas.map((m) => ({ name: m.name, color: COLOR_POR_ANIO[m.year], year: m.year }))
+    nuevas.map((m) => ({ name: m.name, color: COLOR_POR_ANIO[m.year] || 'indigo', year: m.year }))
   );
 
   res.status(201).json({ created, skipped: delPlan.length - nuevas.length });
@@ -83,7 +97,7 @@ async function create(req, res) {
     userId: req.userId,
     name: name.trim(),
     color: color || 'indigo',
-    year: normalizarAnio(year),
+    year: normalizarAnio(year, await Plan.findYears()),
   });
 
   res.status(201).json(subject);
@@ -106,7 +120,7 @@ async function update(req, res) {
     color: color || existing.color,
     // Ojo: acá NO usamos "|| existing.year" porque queremos permitir
     // que el usuario saque el año (mandando year: null a propósito).
-    year: normalizarAnio(year),
+    year: normalizarAnio(year, await Plan.findYears()),
   });
 
   res.json(updated);

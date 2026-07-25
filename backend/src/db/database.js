@@ -138,6 +138,49 @@ async function initDb() {
     )
   `);
 
+  // ── El plan de estudio (materias + correlativas) ──
+  //
+  // Antes esto vivía en un archivo .js. Lo movimos a la base para poder
+  // corregir una correlativa mal cargada sin tener que editar código,
+  // commitear y esperar un redeploy.
+  //
+  // Ojo con la clave primaria: acá NO hay un id autoincremental. El
+  // número de materia del plan (1, 2, ... 36, 99) ya identifica de forma
+  // única y estable a cada una en el mundo real: es una CLAVE NATURAL.
+  // Agregarle un id al lado sería un identificador de más que no
+  // significa nada y que habría que mantener sincronizado.
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS plan_subjects (
+      "code" INTEGER PRIMARY KEY,
+      "year" INTEGER NOT NULL,
+      "name" TEXT NOT NULL,
+      "note" TEXT
+    )
+  `);
+
+  // Las correlativas: cada FILA es "para cursar la materia X necesito
+  // la materia Y en tal condición".
+  //
+  // En el archivo .js esto era un array (regular: [13, 16]). Un array no
+  // entra en una columna: en el modelo relacional, cada elemento de la
+  // lista se convierte en una fila. Base de Datos (19) pasa de ser una
+  // materia con dos arrays a ser cuatro filas.
+  //
+  // Es una relación N:N REFLEXIVA: la tabla se apunta a sí misma dos
+  // veces (materia ↔ materia), igual que "usuario sigue a usuario".
+  //
+  // La ventaja concreta: ahora se puede preguntar al revés. "¿Qué
+  // destraba aprobar Análisis II?" es WHERE "requires" = 9, algo que
+  // con los arrays en JS obligaba a recorrer las 37 materias.
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS plan_correlativas (
+      "code"     INTEGER NOT NULL REFERENCES plan_subjects("code") ON DELETE CASCADE,
+      "requires" INTEGER NOT NULL REFERENCES plan_subjects("code") ON DELETE CASCADE,
+      "kind"     TEXT NOT NULL,
+      UNIQUE ("code", "requires", "kind")
+    )
+  `);
+
   // ── Migración ──
   // El CREATE de arriba solo corre en instalaciones NUEVAS. Para las
   // tablas que ya existían (con datos), agregamos la columna aparte.
@@ -147,7 +190,57 @@ async function initDb() {
   // inventadas por el usuario tampoco están obligadas a tener nivel.
   await ensureColumn('subjects', 'year', 'INTEGER');
 
+  await seedPlanIfEmpty();
+
   console.log(`🗄️  Base de datos lista (${db.dialect})`);
+}
+
+// Carga el plan de estudio SOLO si la tabla está vacía.
+//
+// Este es el cambio de rol importante: data/planSistemas.js deja de ser
+// la fuente de verdad y pasa a ser la SEMILLA (el estado inicial).
+//   - Base nueva  → arranca con el plan completo, sin cargar nada a mano.
+//   - Base con datos → no se toca, así tus correcciones sobreviven a
+//     cada redeploy. Si el seed pisara los datos siempre, editar la base
+//     no serviría de nada: el próximo deploy borraría los cambios.
+async function seedPlanIfEmpty() {
+  const [fila] = await db.query('SELECT COUNT(*) AS n FROM plan_subjects');
+
+  // Number() no es decorativo: en Postgres, COUNT devuelve un bigint y
+  // el driver lo entrega como STRING para no perder precisión. Sin la
+  // conversión, "0" > 0 sería false pero la comparación con datos daría
+  // resultados raros según el operador. Comparamos números con números.
+  if (Number(fila.n) > 0) return;
+
+  // require acá adentro y no arriba de todo: así el archivo de semilla
+  // se carga solo la primera vez, y queda claro que es una dependencia
+  // del arranque y no de la operación normal de la app.
+  const { PLAN_SISTEMAS, NOTAS_ESPECIALES } = require('../data/planSistemas');
+
+  // Un INSERT con 37 tuplas en vez de 37 INSERT. Además de ser mucho
+  // más rápido, es atómico: entran todas o no entra ninguna.
+  const tuplasMaterias = PLAN_SISTEMAS.map(() => '(?, ?, ?, ?)').join(', ');
+  await db.run(
+    `INSERT INTO plan_subjects ("code", "year", "name", "note") VALUES ${tuplasMaterias}`,
+    PLAN_SISTEMAS.flatMap((m) => [m.code, m.year, m.name, NOTAS_ESPECIALES[m.code] ?? null])
+  );
+
+  // Acá se ve el "aplanado": los dos arrays de cada materia se
+  // convierten en una fila por cada correlativa.
+  const deps = PLAN_SISTEMAS.flatMap((m) => [
+    ...m.regular.map((requiere) => [m.code, requiere, 'regular']),
+    ...m.aprobada.map((requiere) => [m.code, requiere, 'aprobada']),
+  ]);
+
+  if (deps.length > 0) {
+    const tuplasDeps = deps.map(() => '(?, ?, ?)').join(', ');
+    await db.run(
+      `INSERT INTO plan_correlativas ("code", "requires", "kind") VALUES ${tuplasDeps}`,
+      deps.flat()
+    );
+  }
+
+  console.log(`🌱 Plan cargado: ${PLAN_SISTEMAS.length} materias, ${deps.length} correlativas`);
 }
 
 // Agrega una columna solo si todavía no existe (idempotente en ambas bases).
