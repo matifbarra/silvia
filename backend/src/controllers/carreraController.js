@@ -80,6 +80,17 @@ async function getCarrera(req, res) {
   });
 }
 
+// GET /api/carrera/materias
+// El catálogo pelado del plan: código, año y nombre. Lo usa el
+// desplegable de materias del formulario de tareas.
+//
+// Fijate que NO es privado por usuario: el plan es el mismo para todos.
+// Sigue detrás del token igual, porque no hay razón para exponerlo a
+// cualquiera que pase, pero no filtra por req.userId.
+async function getMaterias(req, res) {
+  res.json(await Plan.findList());
+}
+
 // PUT /api/carrera
 // Body: { codes: [1, 2, 3], status: 'aprobada' }
 // Sirve para una sola materia (array de uno) o para un año entero.
@@ -114,4 +125,4 @@ async function setStatus(req, res) {
   return getCarrera(req, res);
 }
 
-module.exports = { getCarrera, setStatus, ESTADOS };
+module.exports = { getCarrera, getMaterias, setStatus, ESTADOS };

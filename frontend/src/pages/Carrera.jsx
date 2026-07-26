@@ -2,7 +2,8 @@
 // CARRERA — Plan de estudio y correlativas
 //
 // Esta página responde UNA pregunta: "¿qué puedo cursar y cuánto me
-// falta?". Por eso no gestiona materias (eso es /materias) ni tareas.
+// falta?". Por eso no muestra tareas: acá se marca el estado de cada
+// materia del plan, y las tareas viven en /tareas.
 //
 // Para que no se desborde de información usamos dos recursos clásicos:
 //   1. Vista por defecto = la respuesta ("Podés cursar"), no los datos.

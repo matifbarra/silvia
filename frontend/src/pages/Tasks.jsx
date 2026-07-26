@@ -1,16 +1,20 @@
 // ─────────────────────────────────────────────────────────────
 // PÁGINA DE TAREAS
-// - Carga tareas Y materias (las materias llenan el <select>)
+// - Carga tareas Y el catálogo del plan (llena el <select> de materia)
 // - Formulario: título + fecha de entrega + materia (opcional)
 // - Cada tarea: checkbox para marcar hecha, badge de materia,
 //   fecha (marca "Vencida" si pasó y sigue pendiente), y borrar
 // - Filtro: todas / pendientes / hechas
+//
+// La materia de una tarea es un CÓDIGO del plan (1..36, 99), no una
+// materia que el usuario haya creado: acá no se inventan materias, se
+// eligen las que ya existen en el plan de la carrera.
 // ─────────────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react';
 import { getTasks, createTask, updateTask, toggleTask, deleteTask } from '../api/tasks';
-import { getSubjects } from '../api/subjects';
-import { SUBJECT_COLORS } from '../constants/colors';
+import { getMaterias } from '../api/carrera';
+import { YEAR_DOT, porNombre } from '../constants/years';
 import Spinner from '../components/Spinner';
 import DatePicker from '../components/DatePicker';
 import Select from '../components/Select';
@@ -77,13 +81,14 @@ const FIELD =
 export default function Tasks() {
   const confirmar = useConfirm();
   const [tasks, setTasks] = useState([]);
-  const [subjects, setSubjects] = useState([]);
+  const [materias, setMaterias] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Campos del formulario
+  // Campos del formulario. `code` viaja como string porque es el value
+  // de un <Select>; el backend lo convierte a número.
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [subjectId, setSubjectId] = useState('');
+  const [code, setCode] = useState('');
   const [priority, setPriority] = useState('media');
   const [saving, setSaving] = useState(false);
 
@@ -94,15 +99,15 @@ export default function Tasks() {
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
-  const [editSubjectId, setEditSubjectId] = useState('');
+  const [editCode, setEditCode] = useState('');
   const [editPriority, setEditPriority] = useState('media');
 
-  // Al montar: pedimos tareas y materias en paralelo
+  // Al montar: pedimos tareas y el catálogo del plan en paralelo
   useEffect(() => {
-    Promise.all([getTasks(), getSubjects()])
-      .then(([tasksData, subjectsData]) => {
+    Promise.all([getTasks(), getMaterias()])
+      .then(([tasksData, materiasData]) => {
         setTasks(tasksData);
-        setSubjects(subjectsData);
+        setMaterias(materiasData);
       })
       .catch((err) => console.error('Error cargando datos', err))
       .finally(() => setLoading(false));
@@ -116,13 +121,13 @@ export default function Tasks() {
       const nueva = await createTask({
         title: title.trim(),
         dueDate: dueDate || null,
-        subjectId: subjectId || null,
+        code: code || null,
         priority,
       });
       setTasks((prev) => [nueva, ...prev]);
       setTitle('');
       setDueDate('');
-      setSubjectId('');
+      setCode('');
       setPriority('media');
     } catch (err) {
       console.error('Error creando tarea', err);
@@ -147,7 +152,7 @@ export default function Tasks() {
     setEditingId(task.id);
     setEditTitle(task.title);
     setEditDueDate(task.dueDate || '');
-    setEditSubjectId(task.subjectId ? String(task.subjectId) : '');
+    setEditCode(task.code ? String(task.code) : '');
     setEditPriority(task.priority || 'media');
   }
 
@@ -161,7 +166,7 @@ export default function Tasks() {
       const actualizada = await updateTask(id, {
         title: editTitle.trim(),
         dueDate: editDueDate || null,
-        subjectId: editSubjectId || null,
+        code: editCode || null,
         priority: editPriority,
       });
       setTasks((prev) => prev.map((t) => (t.id === id ? actualizada : t)));
@@ -204,14 +209,18 @@ export default function Tasks() {
     (t) => !t.done && t.dueDate && daysUntil(t.dueDate) <= 0
   ).length;
 
-  // Opciones del <Select> de materia: "Sin materia" + cada materia con su
-  // puntito de color. Los ids van como string para comparar con el value.
+  // Opciones del <Select> de materia: "Sin materia" + las 37 del plan,
+  // ordenadas alfabéticamente y con el puntito del color de su año.
+  //
+  // El backend las manda en el orden del plan (por año y código). Acá
+  // las reordenamos por nombre porque en un desplegable buscás leyendo,
+  // y para eso el alfabético gana. El color mantiene visible el año.
   const subjectOptions = [
     { value: '', label: 'Sin materia' },
-    ...subjects.map((s) => ({
-      value: String(s.id),
-      label: s.name,
-      dot: (SUBJECT_COLORS[s.color] || SUBJECT_COLORS.indigo).dot,
+    ...[...materias].sort(porNombre).map((m) => ({
+      value: String(m.code),
+      label: m.name,
+      dot: YEAR_DOT[m.year],
     })),
   ];
 
@@ -276,8 +285,8 @@ export default function Tasks() {
             Materia
           </label>
           <Select
-            value={subjectId}
-            onChange={setSubjectId}
+            value={code}
+            onChange={setCode}
             options={subjectOptions}
             ariaLabel="Materia de la tarea"
             className="w-full sm:w-52"
@@ -341,9 +350,9 @@ export default function Tasks() {
       ) : (
         <ul className="space-y-2.5">
           {visibleTasks.map((task, i) => {
-            const c = task.subjectColor
-              ? SUBJECT_COLORS[task.subjectColor] || SUBJECT_COLORS.indigo
-              : null;
+            // El color sale del año de la materia, que viene del JOIN
+            // con el plan. Si la tarea no tiene materia, no hay puntito.
+            const dot = YEAR_DOT[task.subjectYear];
             const due = dueInfo(task.dueDate, task.done);
             const p = PRIORITIES[task.priority] || PRIORITIES.media;
 
@@ -373,8 +382,8 @@ export default function Tasks() {
                     className="w-full sm:w-44"
                   />
                   <Select
-                    value={editSubjectId}
-                    onChange={setEditSubjectId}
+                    value={editCode}
+                    onChange={setEditCode}
                     options={subjectOptions}
                     ariaLabel="Materia de la tarea"
                     className="w-full sm:w-44"
@@ -443,7 +452,7 @@ export default function Tasks() {
                 {/* Badge de materia */}
                 {task.subjectName && (
                   <span className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">
-                    <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+                    <span className={`w-2 h-2 rounded-full ${dot}`} />
                     {task.subjectName}
                   </span>
                 )}

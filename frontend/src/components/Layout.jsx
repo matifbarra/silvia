@@ -47,9 +47,6 @@ export default function Layout() {
               <NavLink to="/" end className={linkClass}>
                 resumen
               </NavLink>
-              <NavLink to="/materias" className={linkClass}>
-                materias
-              </NavLink>
               <NavLink to="/tareas" className={linkClass}>
                 tareas
               </NavLink>

@@ -10,6 +10,13 @@ export async function getCarrera() {
   return res.data;
 }
 
+// El catálogo pelado del plan: [{ code, year, name }].
+// Lo usa el desplegable de materias del formulario de tareas.
+export async function getMaterias() {
+  const res = await api.get('/carrera/materias');
+  return res.data;
+}
+
 // Cambia el estado de una o varias materias.
 // El backend devuelve la carrera entera recalculada, porque cambiar
 // una materia puede habilitar o bloquear otras.

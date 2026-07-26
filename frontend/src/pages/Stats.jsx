@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getStats } from '../api/stats';
-import { SUBJECT_COLORS } from '../constants/colors';
+import { YEAR_DOT } from '../constants/years';
 import Spinner from '../components/Spinner';
 import Meter from '../components/Meter';
 import { useCountUp } from '../hooks/useCountUp';
@@ -18,7 +18,7 @@ import { IconBook, IconClipboard, IconCheck, IconZap } from '../components/icons
 
 // Config visual de cada KPI: ícono + color de acento del número.
 const KPIS = [
-  { key: 'totalSubjects', label: 'Materias', Icon: IconBook, accent: 'text-brand-600 dark:text-brand-400', chip: 'bg-brand-50 text-brand-600 dark:bg-brand-500/12 dark:text-brand-400' },
+  { key: 'cursando', label: 'Cursando', Icon: IconBook, accent: 'text-brand-600 dark:text-brand-400', chip: 'bg-brand-50 text-brand-600 dark:bg-brand-500/12 dark:text-brand-400' },
   { key: 'pendingTasks', label: 'Pendientes', Icon: IconClipboard, accent: 'text-amber-600 dark:text-amber-400', chip: 'bg-amber-50 text-amber-600 dark:bg-amber-500/12 dark:text-amber-400' },
   { key: 'doneTasks', label: 'Hechas', Icon: IconCheck, accent: 'text-mint-600 dark:text-mint-400', chip: 'bg-mint-500/10 text-mint-600 dark:bg-mint-500/12 dark:text-mint-400' },
   { key: 'overdueTasks', label: 'Vencidas', Icon: IconZap, accent: 'text-red-600 dark:text-red-400', chip: 'bg-red-50 text-red-600 dark:bg-red-500/12 dark:text-red-400' },
@@ -123,26 +123,26 @@ export default function Stats() {
 
         {stats.perSubject.length === 0 ? (
           <p className="text-slate-400 text-sm">
-            Todavía no tenés materias.{' '}
-            <Link to="/materias" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
-              Creá la primera
+            Todavía no cargaste ninguna tarea con materia.{' '}
+            <Link to="/tareas" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
+              Cargá la primera
             </Link>
             .
           </p>
         ) : (
           <div className="space-y-3.5">
             {stats.perSubject.map((s, i) => {
-              const c = SUBJECT_COLORS[s.color] || SUBJECT_COLORS.indigo;
+              const dot = YEAR_DOT[s.year];
               const widthPct = (s.total / maxTasks) * 100;
               return (
-                <div key={s.subjectId} className="flex items-center gap-3">
+                <div key={s.code} className="flex items-center gap-3">
                   <span className="w-28 sm:w-40 shrink-0 text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
                     {s.name}
                   </span>
 
                   <div className="flex-1 h-6 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden">
                     <div
-                      className={`h-full ${c.dot} rounded-lg`}
+                      className={`h-full ${dot} rounded-lg`}
                       style={{
                         width: mounted ? `${widthPct}%` : '0%',
                         transition: 'width 0.8s cubic-bezier(0.2,0.7,0.2,1)',

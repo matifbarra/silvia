@@ -78,12 +78,26 @@ if (usePostgres) {
 // ─── Creación de tablas (DDL específico por base) ────────────
 // La única diferencia real entre bases es cómo se declara el id
 // autoincremental y el tipo de fecha por defecto.
-async function initDb() {
-  const idColumn = usePostgres
-    ? 'id SERIAL PRIMARY KEY'
-    : 'id INTEGER PRIMARY KEY AUTOINCREMENT';
-  const nowDefault = usePostgres ? "NOW()::text" : "datetime('now')";
+const idColumn = usePostgres
+  ? 'id SERIAL PRIMARY KEY'
+  : 'id INTEGER PRIMARY KEY AUTOINCREMENT';
+const nowDefault = usePostgres ? 'NOW()::text' : "datetime('now')";
 
+// Las columnas de "tasks" en UN solo lugar. Las usa el CREATE de acá
+// abajo y también la reconstrucción de la migración: si estuvieran
+// escritas dos veces, tarde o temprano quedarían distintas.
+const TASKS_COLUMNS = `
+  ${idColumn},
+  "userId"    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  "code"      INTEGER,
+  "title"     TEXT NOT NULL,
+  "dueDate"   TEXT,
+  "done"      INTEGER NOT NULL DEFAULT 0,
+  "priority"  TEXT NOT NULL DEFAULT 'media',
+  "createdAt" TEXT NOT NULL DEFAULT (${nowDefault})
+`;
+
+async function initDb() {
   await db.run(`
     CREATE TABLE IF NOT EXISTS users (
       ${idColumn},
@@ -94,35 +108,23 @@ async function initDb() {
     )
   `);
 
-  await db.run(`
-    CREATE TABLE IF NOT EXISTS subjects (
-      ${idColumn},
-      "userId"    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      "name"      TEXT NOT NULL,
-      "color"     TEXT NOT NULL DEFAULT 'indigo',
-      "year"      INTEGER,
-      "createdAt" TEXT NOT NULL DEFAULT (${nowDefault})
-    )
-  `);
-
-  await db.run(`
-    CREATE TABLE IF NOT EXISTS tasks (
-      ${idColumn},
-      "userId"    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      "subjectId" INTEGER REFERENCES subjects(id) ON DELETE CASCADE,
-      "title"     TEXT NOT NULL,
-      "dueDate"   TEXT,
-      "done"      INTEGER NOT NULL DEFAULT 0,
-      "priority"  TEXT NOT NULL DEFAULT 'media',
-      "createdAt" TEXT NOT NULL DEFAULT (${nowDefault})
-    )
-  `);
+  // Una tarea puede apuntar a una materia DEL PLAN por su código.
+  //
+  // Antes existía una tabla "subjects" donde cada usuario se creaba sus
+  // propias materias a mano. Se fue: el usuario no inventa materias, las
+  // consulta del plan. Una copia por usuario de algo que es igual para
+  // todos es duplicación, y duplicación es desincronización esperando.
+  //
+  // "code" va NULLABLE: una tarea puede no ser de ninguna materia
+  // ("renovar el alta de alumno"). Y va SIN FOREIGN KEY, igual que
+  // plan_status."code" — el motivo está explicado en migrateTasksToPlan().
+  await db.run(`CREATE TABLE IF NOT EXISTS tasks (${TASKS_COLUMNS})`);
 
   // Estado de cada materia DEL PLAN para cada usuario.
   //
-  // Tabla aparte de "subjects" a propósito: podés marcar "Análisis I
-  // aprobada" sin tener que agregarla a Mis Materias (ya no la cursás).
-  // Son dos cosas distintas: tu historia académica vs. lo que llevás hoy.
+  // El plan es igual para todos; lo que cambia de persona a persona es
+  // en qué punto está de cada materia. Por eso el dato compartido vive
+  // en plan_subjects y el personal acá, con el userId al lado.
   //
   // El UNIQUE("userId","code") es la clave del asunto: garantiza que
   // no haya dos estados para la misma materia, y es lo que después nos
@@ -181,16 +183,15 @@ async function initDb() {
     )
   `);
 
-  // ── Migración ──
+  // ── Migraciones ──
   // El CREATE de arriba solo corre en instalaciones NUEVAS. Para las
-  // tablas que ya existían (con datos), agregamos la columna aparte.
+  // tablas que ya existían (con datos), los cambios van acá.
   await ensureColumn('tasks', 'priority', "TEXT NOT NULL DEFAULT 'media'");
-  // "year" = nivel del plan de estudio (1 a 5). Va SIN "NOT NULL" a propósito:
-  // las materias que ya existían quedan en NULL ("sin año") y las materias
-  // inventadas por el usuario tampoco están obligadas a tener nivel.
-  await ensureColumn('subjects', 'year', 'INTEGER');
 
+  // El orden importa: la migración busca cada materia del plan POR SU
+  // NOMBRE, así que el plan tiene que estar cargado antes.
   await seedPlanIfEmpty();
+  await migrateTasksToPlan();
 
   console.log(`🗄️  Base de datos lista (${db.dialect})`);
 }
@@ -241,6 +242,91 @@ async function seedPlanIfEmpty() {
   }
 
   console.log(`🌱 Plan cargado: ${PLAN_SISTEMAS.length} materias, ${deps.length} correlativas`);
+}
+
+// Pasa las tareas de la vieja tabla "subjects" a las materias del plan.
+//
+// El problema: tasks."subjectId" apuntaba a subjects.id, que era un id
+// distinto por usuario. Si Análisis II era la 42 para vos y la 33 para
+// mí, ese número no significa nada fuera de tu cuenta. El código del
+// plan (9) es el mismo para todos: por eso pasamos a guardar ese.
+//
+// El único puente entre los dos mundos es el NOMBRE, porque las materias
+// se creaban copiándolo del plan. Las que el usuario escribió a mano no
+// van a matchear y quedan en NULL: la tarea sobrevive, sin materia.
+//
+// Sobre no ponerle FOREIGN KEY a tasks."code": para agregarle una clave
+// foránea a una tabla que YA existe, SQLite obliga a reconstruirla y
+// Postgres usa un ALTER; terminaríamos con dos caminos distintos y el
+// riesgo de que una base vieja y una nueva no queden iguales. Además, si
+// mañana borrás una materia del plan a mano, el LEFT JOIN simplemente
+// devuelve NULL y la tarea se sigue viendo. El costo honesto: la base no
+// impide un código inexistente, así que lo valida el controlador.
+async function migrateTasksToPlan() {
+  // Si "subjects" ya no está, la migración corrió (o es una base nueva).
+  if (!(await tableExists('subjects'))) return;
+
+  // Red de seguridad. Si el plan estuviera vacío, el backfill de abajo
+  // pondría TODOS los "code" en NULL y el DROP se llevaría la única
+  // forma de recuperar el vínculo: irreversible y silencioso. Preferimos
+  // no migrar y que quede el aviso, que se puede arreglar; lo otro no.
+  const [{ n: materias }] = await db.query('SELECT COUNT(*) AS n FROM plan_subjects');
+  if (Number(materias) === 0) {
+    console.warn('⚠️  Migración de tareas cancelada: plan_subjects está vacía.');
+    return;
+  }
+
+  await ensureColumn('tasks', 'code', 'INTEGER');
+
+  await db.run(`
+    UPDATE tasks SET "code" = (
+      SELECT ps."code"
+      FROM plan_subjects ps
+      JOIN subjects s ON s."name" = ps."name"
+      WHERE s.id = tasks."subjectId"
+    )
+    WHERE "subjectId" IS NOT NULL AND "code" IS NULL
+  `);
+
+  const [{ n }] = await db.query('SELECT COUNT(*) AS n FROM tasks WHERE "code" IS NOT NULL');
+
+  // Ahora sacamos la columna vieja. Acá las dos bases NO se comportan
+  // igual, y es de esos detalles que solo aparecen al migrar de verdad:
+  //   - Postgres borra la columna y con ella su clave foránea.
+  //   - SQLite se niega: "unknown column subjectId in foreign key
+  //     definition". No sabe borrar una columna que participa de un FK.
+  //     La salida es el patrón clásico de SQLite: crear la tabla nueva,
+  //     copiar las filas, borrar la vieja y renombrar.
+  if (usePostgres) {
+    await db.run('ALTER TABLE tasks DROP COLUMN IF EXISTS "subjectId"');
+  } else {
+    const cols = 'id, "userId", "code", "title", "dueDate", "done", "priority", "createdAt"';
+    await db.run(`CREATE TABLE tasks_nueva (${TASKS_COLUMNS})`);
+    await db.run(`INSERT INTO tasks_nueva (${cols}) SELECT ${cols} FROM tasks`);
+    await db.run('DROP TABLE tasks');
+    await db.run('ALTER TABLE tasks_nueva RENAME TO tasks');
+  }
+
+  // Recién ahora se puede borrar. Si lo hiciéramos antes, en SQLite el
+  // DROP TABLE dispara un DELETE implícito y el ON DELETE CASCADE de
+  // tasks."subjectId" se llevaría puestas TODAS las tareas con materia.
+  await db.run('DROP TABLE IF EXISTS subjects');
+
+  console.log(`🔁 Tareas migradas al plan (${n} quedaron asociadas a una materia)`);
+}
+
+// ¿Existe esta tabla? Cada base guarda su catálogo en otro lado:
+// Postgres usa information_schema (el estándar SQL) y SQLite su propia
+// tabla sqlite_master.
+async function tableExists(name) {
+  const row = usePostgres
+    ? await db.get(
+        `SELECT 1 FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = ?`,
+        [name]
+      )
+    : await db.get(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?`, [name]);
+  return !!row;
 }
 
 // Agrega una columna solo si todavía no existe (idempotente en ambas bases).

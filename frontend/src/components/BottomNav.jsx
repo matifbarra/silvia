@@ -10,13 +10,12 @@
 // ─────────────────────────────────────────────────────────────
 
 import { NavLink } from 'react-router-dom';
-import { IconChart, IconBook, IconClipboard, IconRoute } from './icons';
+import { IconChart, IconClipboard, IconRoute } from './icons';
 
 // `end` solo en "/" para que Resumen no quede marcado como activo
-// estando en /materias (que también empieza con "/").
+// estando en /tareas (que también empieza con "/").
 const TABS = [
   { to: '/', label: 'resumen', Icon: IconChart, end: true },
-  { to: '/materias', label: 'materias', Icon: IconBook },
   { to: '/tareas', label: 'tareas', Icon: IconClipboard },
   { to: '/carrera', label: 'carrera', Icon: IconRoute },
 ];
@@ -30,7 +29,7 @@ export default function BottomNav() {
       // tapados. Requiere viewport-fit=cover en el HTML.
       className="sm:hidden fixed bottom-0 inset-x-0 z-30 border-t border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/90 pb-[env(safe-area-inset-bottom)]"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-3">
         {TABS.map(({ to, label, Icon, end }) => (
           <li key={to}>
             <NavLink

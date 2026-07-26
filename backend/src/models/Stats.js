@@ -13,9 +13,14 @@ const Stats = {
   async getForUser(userId) {
     const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
 
+    // Antes el primer contador era "cuántas materias tenés cargadas".
+    // Esa pregunta murió con la tabla subjects: las materias ya no se
+    // cargan, son las 37 del plan para todo el mundo. La versión útil
+    // es cuántas estás cursando AHORA, que sí es tuya y cambia.
     const totals = await db.get(
       `SELECT
-         (SELECT CAST(COUNT(*) AS INTEGER) FROM subjects WHERE "userId" = ?) AS "totalSubjects",
+         (SELECT CAST(COUNT(*) AS INTEGER) FROM plan_status
+                                            WHERE "userId" = ? AND "status" = 'cursando') AS "cursando",
          (SELECT CAST(COUNT(*) AS INTEGER) FROM tasks    WHERE "userId" = ?) AS "totalTasks",
          (SELECT CAST(COUNT(*) AS INTEGER) FROM tasks    WHERE "userId" = ? AND "done" = 1) AS "doneTasks",
          (SELECT CAST(COUNT(*) AS INTEGER) FROM tasks    WHERE "userId" = ? AND "done" = 0
@@ -30,23 +35,28 @@ const Stats = {
         ? Math.round((totals.doneTasks / totals.totalTasks) * 100)
         : 0;
 
+    // Antes era un LEFT JOIN desde subjects, porque tenía sentido
+    // mostrar una materia tuya aunque no tuviera tareas. Ahora el lado
+    // de las materias son las 37 del plan: con LEFT JOIN el gráfico
+    // saldría con 30 barras en cero. Arrancamos desde tasks y el JOIN
+    // pasa a ser INNER: solo aparecen las materias en las que hiciste algo.
     const perSubject = await db.query(
       `SELECT
-         s.id      AS "subjectId",
-         s."name"  AS "name",
-         s."color" AS "color",
-         CAST(COUNT(t.id) AS INTEGER)                                 AS "total",
+         ps."code" AS "code",
+         ps."name" AS "name",
+         ps."year" AS "year",
+         CAST(COUNT(t.id) AS INTEGER)                                   AS "total",
          CAST(SUM(CASE WHEN t."done" = 1 THEN 1 ELSE 0 END) AS INTEGER) AS "done"
-       FROM subjects s
-       LEFT JOIN tasks t ON t."subjectId" = s.id AND t."userId" = s."userId"
-       WHERE s."userId" = ?
-       GROUP BY s.id, s."name", s."color"
-       ORDER BY "total" DESC, s."name" ASC`,
+       FROM tasks t
+       JOIN plan_subjects ps ON ps."code" = t."code"
+       WHERE t."userId" = ?
+       GROUP BY ps."code", ps."name", ps."year"
+       ORDER BY "total" DESC, ps."name" ASC`,
       [userId]
     );
 
     return {
-      totalSubjects: totals.totalSubjects,
+      cursando: totals.cursando,
       totalTasks: totals.totalTasks,
       doneTasks: totals.doneTasks,
       pendingTasks,

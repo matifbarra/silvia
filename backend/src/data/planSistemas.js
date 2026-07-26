@@ -83,25 +83,13 @@ const NOTAS_ESPECIALES = {
   36: 'Además, tenés que tener aprobadas TODAS las materias del plan y la Práctica Profesional Supervisada.',
 };
 
-// Color por defecto según el año, para que al importar cada nivel quede
-// visualmente diferenciado. Son las claves de SUBJECT_COLORS del
-// frontend (ahí se traducen a clases de Tailwind).
-//
-// Esto NO se migró a la base a propósito: el color es una decisión de
-// presentación, no un dato del plan de estudio. La UTN no dice de qué
-// color es 2do año.
-const COLOR_POR_ANIO = {
-  1: 'blue',
-  2: 'green',
-  3: 'amber',
-  4: 'rose',
-  5: 'purple',
-};
-
 // YEARS y PLAN_POR_CODE ya no viven acá: ahora los resuelve
 // models/Plan.js consultando la base (findYears / findCodes).
+//
+// COLOR_POR_ANIO tampoco: el color de cada año es una decisión de
+// presentación, no un dato del plan (la UTN no dice de qué color es 2do
+// año). Ahora vive donde corresponde, en frontend/src/constants/years.js.
 module.exports = {
   PLAN_SISTEMAS,
-  COLOR_POR_ANIO,
   NOTAS_ESPECIALES,
 };

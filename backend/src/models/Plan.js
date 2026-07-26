@@ -47,6 +47,14 @@ const Plan = {
     return [...porCode.values()];
   },
 
+  // Catálogo liviano: solo lo necesario para llenar un desplegable.
+  // Podríamos reutilizar findAll(), pero eso trae también las 79
+  // correlativas y las cruza en memoria para nada. Una consulta que
+  // pide justo lo que necesita es más barata y dice lo que hace.
+  async findList() {
+    return db.query('SELECT "code", "year", "name" FROM plan_subjects ORDER BY "year", "code"');
+  },
+
   // Set de codes válidos, para validar lo que manda el cliente.
   // Devolvemos un Set y no un array porque la pregunta que vamos a
   // hacer es "¿existe este code?" y en un Set eso es O(1).

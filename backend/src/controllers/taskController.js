@@ -3,12 +3,31 @@
 // ─────────────────────────────────────────────────────────────
 
 const Task = require('../models/Task');
-const Subject = require('../models/Subject');
+const Plan = require('../models/Plan');
 
 // Prioridades válidas. Si llega cualquier otra cosa, la ignoramos.
 const PRIORIDADES = ['alta', 'media', 'baja'];
 function normalizarPrioridad(valor, porDefecto = 'media') {
   return PRIORIDADES.includes(valor) ? valor : porDefecto;
+}
+
+// La materia de una tarea es un código del plan. Como tasks."code" no
+// tiene clave foránea (ver migrateTasksToPlan en database.js), la
+// validación es responsabilidad nuestra: si el código no existe en el
+// plan, cortamos acá y no dejamos que entre basura a la base.
+//
+// Devuelve { code } si está todo bien (con code = null si no mandaron
+// materia) o { error } si el código no pertenece al plan. Devolvemos el
+// error en vez de tirarlo porque Express no atrapa las excepciones de
+// una función async: la petición quedaría colgada sin respuesta.
+async function resolverCode(valor) {
+  if (valor === undefined || valor === null || valor === '') return { code: null };
+
+  const code = Number(valor);
+  const delPlan = await Plan.findCodes();
+  if (!delPlan.has(code)) return { error: 'La materia indicada no existe en el plan' };
+
+  return { code };
 }
 
 // GET /api/tasks
@@ -19,23 +38,18 @@ async function getAll(req, res) {
 
 // POST /api/tasks
 async function create(req, res) {
-  const { title, dueDate, subjectId, priority } = req.body;
+  const { title, dueDate, code, priority } = req.body;
 
   if (!title || !title.trim()) {
     return res.status(400).json({ message: 'El título de la tarea es obligatorio' });
   }
 
-  // Si mandaron una materia, confirmamos que exista y sea del usuario
-  if (subjectId) {
-    const subject = await Subject.findById(Number(subjectId), req.userId);
-    if (!subject) {
-      return res.status(400).json({ message: 'La materia indicada no existe' });
-    }
-  }
+  const materia = await resolverCode(code);
+  if (materia.error) return res.status(400).json({ message: materia.error });
 
   const task = await Task.create({
     userId: req.userId,
-    subjectId: subjectId ? Number(subjectId) : null,
+    code: materia.code,
     title: title.trim(),
     dueDate: dueDate || null,
     priority: normalizarPrioridad(priority),
@@ -53,22 +67,17 @@ async function update(req, res) {
     return res.status(404).json({ message: 'Tarea no encontrada' });
   }
 
-  const { title, dueDate, subjectId, priority } = req.body;
+  const { title, dueDate, code, priority } = req.body;
 
-  // Si mandaron una materia, confirmamos que exista y sea del usuario
-  if (subjectId) {
-    const subject = await Subject.findById(Number(subjectId), req.userId);
-    if (!subject) {
-      return res.status(400).json({ message: 'La materia indicada no existe' });
-    }
-  }
+  const materia = await resolverCode(code);
+  if (materia.error) return res.status(400).json({ message: materia.error });
 
   const updated = await Task.update({
     id,
     userId: req.userId,
     title: title?.trim() || existing.title,
     dueDate: dueDate || null,
-    subjectId: subjectId ? Number(subjectId) : null,
+    code: materia.code,
     priority: normalizarPrioridad(priority, existing.priority),
   });
 

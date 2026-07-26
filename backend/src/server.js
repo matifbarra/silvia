@@ -5,7 +5,6 @@ require('dotenv').config();
 const { initDb } = require('./db/database');
 
 const authRoutes = require('./routes/authRoutes');
-const subjectRoutes = require('./routes/subjectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const carreraRoutes = require('./routes/carreraRoutes');
@@ -30,9 +29,6 @@ app.get('/api/health', (req, res) => {
 
 // Rutas de autenticación → todo lo de authRoutes cuelga de /api/auth
 app.use('/api/auth', authRoutes);
-
-// Rutas de materias → cuelgan de /api/subjects (todas protegidas)
-app.use('/api/subjects', subjectRoutes);
 
 // Rutas de tareas → cuelgan de /api/tasks (todas protegidas)
 app.use('/api/tasks', taskRoutes);
